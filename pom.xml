@@ -234,23 +234,6 @@
 				</dependencies>
 			</plugin>
 			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>exec-maven-plugin</artifactId>
-				<version>1.2.1</version>
-				<executions>
-					<execution>
-						<goals>
-							<goal>exec</goal>
-						</goals>
-					</execution>
-				</executions>
-				<configuration>
-					<mainClass>grandmotherbrain.top.TopServiceServer</mainClass>
-					<arguments>
-					</arguments>
-				</configuration>
-			</plugin>
-			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
 				<configuration>
 					<descriptorRefs>
@@ -258,7 +241,7 @@
 					</descriptorRefs>
 					<archive>
 						<manifest>
-							<mainClass>grandmotherbrain.top.LocalServiceMain</mainClass>
+							<mainClass>com.zillabyte.motherbrain.top.LocalServiceMain</mainClass>
 						</manifest>
 					</archive>
 				</configuration>
