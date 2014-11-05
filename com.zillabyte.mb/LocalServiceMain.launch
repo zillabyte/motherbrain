@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <launchConfiguration type="org.eclipse.jdt.launching.localJavaApplication">
 <listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_PATHS">
-<listEntry value="/open_grandmotherbrain/src/grandmotherbrain/top/LocalServiceMain.java"/>
+<listEntry value="/com.zillabyte.mb/src/grandmotherbrain/top/LocalServiceMain.java"/>
 </listAttribute>
 <listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_TYPES">
 <listEntry value="1"/>
@@ -10,7 +10,7 @@
 <booleanAttribute key="org.eclipse.jdt.launching.ATTR_USE_START_ON_FIRST_THREAD" value="true"/>
 <stringAttribute key="org.eclipse.jdt.launching.CLASSPATH_PROVIDER" value="org.eclipse.m2e.launchconfig.classpathProvider"/>
 <stringAttribute key="org.eclipse.jdt.launching.MAIN_TYPE" value="grandmotherbrain.top.LocalServiceMain"/>
-<stringAttribute key="org.eclipse.jdt.launching.PROJECT_ATTR" value="open_grandmotherbrain"/>
+<stringAttribute key="org.eclipse.jdt.launching.PROJECT_ATTR" value="com.zillabyte.mb"/>
 <stringAttribute key="org.eclipse.jdt.launching.SOURCE_PATH_PROVIDER" value="org.eclipse.m2e.launchconfig.sourcepathProvider"/>
 <stringAttribute key="org.eclipse.jdt.launching.VM_ARGUMENTS" value="-Xmx1000m"/>
 </launchConfiguration>
