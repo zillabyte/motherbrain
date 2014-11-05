@@ -2,5 +2,6 @@
 /target_gmb
 /target_test
 /_persistedFlows
+/.settings
 .project
 .classpath
