@@ -19,7 +19,7 @@ public final class CommandLine {
    */
   final org.apache.commons.cli.CommandLine commandLine;
 
-  CommandLine(final org.apache.commons.cli.CommandLine commandLine) {
+  public CommandLine(final org.apache.commons.cli.CommandLine commandLine) {
     this.commandLine = commandLine;
   }
   

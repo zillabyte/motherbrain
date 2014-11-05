@@ -40,23 +40,24 @@ public class Universe implements Serializable {
   transient TopService _topService = null;
   
   // Support Services/Factories
-  APIService _api = null;
-  RelationDefFactory _relFactory = null;
-  SSHFactory _sshFactory = null;
-  FileFactory _fileFactory = null;
-  LoggerFactory _loggerFactory = null;
-  Metrics _metrics = null;
-  ExceptionHandler _exceptionHandler = null;
-  QueueFactory _queueFactory = null;
-  BenchmarkFactory _benchmarkFactory = new BenchmarkFactory.Noop();
-  ShellFactory _shellFactory = null; 
-  DFSService _dfsService = null;
-  CoordinationServiceWrapper _state = null;
-  AggregationStoreFactory _aggregationStoreFactory = null;  
-  FlowBuilderFactory _flowBuilderFactory = null;
-  ContainerFactory _containerFactory = null;
-  BufferClientFactory _bufferClientFactory = null;
-  BufferService _bufferService = null;
+
+  protected  APIService _api = null;
+  protected  RelationDefFactory _relFactory = null;
+  protected  SSHFactory _sshFactory = null;
+  protected  FileFactory _fileFactory = null;
+  protected  LoggerFactory _loggerFactory = null;
+  protected  Metrics _metrics = null;
+  protected  ExceptionHandler _exceptionHandler = null;
+  protected  QueueFactory _queueFactory = null;
+  protected  BenchmarkFactory _benchmarkFactory = new BenchmarkFactory.Noop();
+  protected  ShellFactory _shellFactory = null; 
+  protected  DFSService _dfsService = null;
+  protected  CoordinationServiceWrapper _state = null;
+  protected  AggregationStoreFactory _aggregationStoreFactory = null;  
+  protected  FlowBuilderFactory _flowBuilderFactory = null;
+  protected  ContainerFactory _containerFactory = null;
+  protected  BufferClientFactory _bufferClientFactory = null;
+  protected  BufferService _bufferService = null;
   
   // Misc 
   Config _config = new Config();
@@ -67,7 +68,7 @@ public class Universe implements Serializable {
   
   
   // Package-private constructor.  Only UniverseBuilder should build a universe.
-  Universe() {
+  public Universe() {
   }
   
 
