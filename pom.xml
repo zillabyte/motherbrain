@@ -100,6 +100,12 @@
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
+			<groupId>com.sun.jersey</groupId>
+			<artifactId>jersey-core</artifactId>
+			<version>1.10</version>
+		</dependency>
+
+		<dependency>
 			<groupId>postgresql</groupId>
 			<artifactId>postgresql</artifactId>
 			<!-- NOTE: Do not change from 8.4; strange things start happening in Redshift 
