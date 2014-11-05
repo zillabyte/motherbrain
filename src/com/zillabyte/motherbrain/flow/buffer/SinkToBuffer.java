@@ -34,6 +34,7 @@ public class SinkToBuffer extends Sink {
   BufferProducer _producer;
   private String _topicName;
   private RelationDef _relation;
+  private Integer _cycle;
   public SinkToBuffer(String id, List<ColumnDef> columns) {
     super(id);
     
@@ -87,7 +88,10 @@ public class SinkToBuffer extends Sink {
     
     String concreteTableName = bufferSettings.getString("topic");
     _relation = new RelationDef(nodeEmitRelation, concreteTableName, columnTypes);
-    _topicName = _relation.concreteName();
+    //TODO: Change this to be cycle_id or something similar (For jake)
+    _cycle = config.getFlowVersion();
+    // Set the final topic name here. Changes for each app push.
+    _topicName = _relation.concreteName() + "_cycle_" + _cycle;
 
     // Have to make the JSON for sending to the sink.
     // Write to schloss
