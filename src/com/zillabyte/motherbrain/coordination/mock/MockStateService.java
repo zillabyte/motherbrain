@@ -135,10 +135,12 @@ public class MockStateService implements CoordinationService, AskWrapper.Askable
 
   @Override
   public com.zillabyte.motherbrain.coordination.Lock lock(final String name, long timeout, long duration) {
-    if (_locks.containsKey(name) == false) {
-//      _log.info("putting lock key in hash...");
-      _locks.put(name, new ReentrantLock());
-    } 
+    synchronized(_locks) {
+      if (_locks.containsKey(name) == false) {
+//        _log.info("lock doesn't exist for "+name+" yet. putting in hash.");
+        _locks.put(name, new ReentrantLock());
+      }
+    }
 //    _log.info("trying to lock: " + name);
     _locks.get(name).lock();
 //    _log.info("lock success: " + name);
@@ -149,8 +151,7 @@ public class MockStateService implements CoordinationService, AskWrapper.Askable
         Lock l = _locks.get(name);
         if (l == null) throw new NullPointerException("tried to unlock non existant lock: " + name);
 
-        //_log.debug("unlock: " + name);
-        
+//        _log.info("unlock: " + name);        
         try {
           l.unlock();
         } catch (IllegalMonitorStateException e) {

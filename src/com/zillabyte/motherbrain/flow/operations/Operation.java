@@ -1140,30 +1140,23 @@ public abstract class Operation implements Serializable {
         Utils.executeWithin(_initial_stage_timeout_ms, new Callable<Void>() {
 
           @Override
-          public Void call() throws OperationException, InterruptedException,
-              CoordinationException, TimeoutException, HeartbeatException {
+          public Void call() throws OperationException, InterruptedException, CoordinationException, TimeoutException, HeartbeatException {
 
             // Init
             Benchmark.markBegin("operation.prepare.initial");
-            _log.info("operation instance is starting prepare(): "
-                + instanceName());
-            Lock lock = Universe.instance().state()
-                .lock("flow_instance_index_" + lockPrefix());
-            if (lock == null)
-              throw new NullPointerException("null lock?: "
-                  + Universe.instance().state());
+            _log.info("operation instance is starting prepare(): " + instanceName());
+            Lock lock = Universe.instance().state().lock("flow_instance_index_" + lockPrefix());
+            if (lock == null) throw new NullPointerException("null lock?: " + Universe.instance().state());
 
             try {
 
               // Get the next instance id..
-              final Integer lastInstanceIndex = Universe.instance().state()
-                  .getState(operationStateKey() + "/last_instance", 0);
+              final Integer lastInstanceIndex = Universe.instance().state().getState(operationStateKey() + "/last_instance", 0);
               final Integer nextInstanceIndex = lastInstanceIndex.intValue() + 1;
               Universe
                   .instance()
                   .state()
-                  .setState(operationStateKey() + "/last_instance",
-                      nextInstanceIndex);
+                  .setState(operationStateKey() + "/last_instance", nextInstanceIndex);
               _instanceIndex = nextInstanceIndex;
 
             } finally {
