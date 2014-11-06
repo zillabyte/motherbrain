@@ -50,9 +50,4 @@ public class App extends Flow {
   public Integer getVersion() {
     return this.getFlowConfig().getFlowVersion();
   }
-
-  public void setVersion(Integer version) {
-    _flowConfig.set("flow_version", version);
-    
-  }
 }

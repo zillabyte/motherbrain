@@ -92,6 +92,17 @@ public abstract class Flow implements Serializable {
 
   public abstract @NonNullByDefault StreamBuilder createStream(ComponentOutput producer) throws DefaultStreamException;
 
+
+
+  public String getRunId() {
+    return _runId;
+  }
+
+  public void setRunId(String runId) {
+    _runId = runId;
+  }
+
+
   public boolean isCoordinated() {
     return _isCoordinated || Config.getOrDefault("storm.coordinated", Boolean.TRUE).booleanValue();
   }
@@ -101,7 +112,7 @@ public abstract class Flow implements Serializable {
   }
   
   public String flowStateKey() {
-    return "flows/" + getId() + "/cycle_" + getVersion();
+    return "flows/" + getId() + "_" + getRunId();
   }
   
   public String operationStateKey(Operation op) {
