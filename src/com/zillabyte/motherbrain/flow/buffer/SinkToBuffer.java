@@ -12,6 +12,7 @@ import com.zillabyte.motherbrain.coordination.CoordinationException;
 import com.zillabyte.motherbrain.flow.Fields;
 import com.zillabyte.motherbrain.flow.FlowCompilationException;
 import com.zillabyte.motherbrain.flow.MapTuple;
+import com.zillabyte.motherbrain.flow.buffer.mock.LocalBufferProducer;
 import com.zillabyte.motherbrain.flow.config.FlowConfig;
 import com.zillabyte.motherbrain.flow.operations.Operation;
 import com.zillabyte.motherbrain.flow.operations.OperationException;
@@ -187,6 +188,9 @@ public class SinkToBuffer extends Sink {
   @Override
   public void onThisBatchCompleted(final Object batchId)  {
     super.onThisBatchCompleted(batchId);
+    if(_producer instanceof LocalBufferProducer && Universe.instance().env().isLocal()) {
+      ((LocalBufferProducer) _producer).closeFile();
+    }
   }
 
 }
