@@ -435,12 +435,12 @@ public class FlowInstance implements Serializable {
 
   public JSONObject createSnapshot(){
     JSONObject snapshot = new JSONObject();
-    snapshot.put("runId", _flow.getRunId());
+    snapshot.put("flow_version", _flow.getVersion());
     return snapshot;
   };
 
   public void applySnapshot(JSONObject snapshot){
-    _flow.setRunId(snapshot.getString("runId"));
+    _flow.setVersion(Integer.parseInt(snapshot.getString("flow_version")));
   };
   
   public void killImpl(final FlowState finalState) throws CoordinationException, InterruptedException, StateMachineException, FlowException, ExecutionException {
