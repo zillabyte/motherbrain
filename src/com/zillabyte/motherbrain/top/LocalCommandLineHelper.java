@@ -69,6 +69,13 @@ public class LocalCommandLineHelper {
         .withType(Number.class)
         .create()
         );
+    
+    availOptions.addOption(OptionBuilder
+        .hasArg()
+        .withLongOpt("output.prefix")
+        .withType(String.class)
+        .create()
+        );
 
     ///////////////////////////////////////////////////////
     // BUILD CORE CONFIG //////////////////////////////////
@@ -88,12 +95,13 @@ public class LocalCommandLineHelper {
     
     
     // Core Config
-    config.put("flow.class", options.getOptionValue("flow.class", "app"));
-    config.put("flow.name",  options.getOptionValue("flow.name", "local_app"));
-    config.put("directory",  options.getOptionValue("directory", "."));
-    config.put("rpc.args",   options.getOptionValue("rpc.args", ""));
-    config.put("api.host",   options.getOptionValue("api.host", "localhost"));
-    config.put("api.port",   Integer.parseInt(options.getOptionValue("api.port", "5000")));
+    config.put("flow.class",   options.getOptionValue("flow.class", "app"));
+    config.put("flow.name",    options.getOptionValue("flow.name", "local_app"));
+    config.put("directory",    options.getOptionValue("directory", "."));
+    config.put("rpc.args",     options.getOptionValue("rpc.args", ""));
+    config.put("api.host",     options.getOptionValue("api.host", "localhost"));
+    config.put("api.port",     Integer.parseInt(options.getOptionValue("api.port", "5000")));
+    config.put("output.prefix",  options.getOptionValue("output.prefix", ""));
 
     ///////////////////////////////////////////////////////
     // CREATE THE UNIVERSE ////////////////////////////////
