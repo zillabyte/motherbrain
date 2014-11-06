@@ -397,7 +397,7 @@ public abstract class Operation implements Serializable {
    * @return
    */
   protected String lockPrefix() {
-    return topFlowId() + "/cycle_" + getTopFlow().getVersion();
+    return topFlowId() + "_" + getTopFlow().getRunId();
   }
 
   protected String workerHost() {
@@ -668,7 +668,7 @@ public abstract class Operation implements Serializable {
   }
 
   public String flowStateKey() {
-    return "flows/" + this.topFlowId() +  "/cycle_" + getTopFlow().getVersion();
+    return "flows/" + this.topFlowId() + "_" + getTopFlow().getRunId();
   }
 
   public String operationStateKey() {
