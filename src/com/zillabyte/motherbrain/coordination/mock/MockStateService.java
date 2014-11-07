@@ -31,8 +31,8 @@ public class MockStateService implements CoordinationService, AskWrapper.Askable
 
   private static Logger _log = Logger.getLogger(MockStateService.class);
   
-  public Map<String, byte[]> _state = Maps.newHashMap();  // public for test inspection
-  public Map<String, Lock> _locks = Maps.newHashMap();  
+  public Map<String, byte[]> _state = Maps.newConcurrentMap();  // public for test inspection
+  public Map<String, Lock> _locks = Maps.newConcurrentMap();  
   public List<Pair<String, MessageHandler>> _messageWatchers = Lists.newArrayList();
   public Integer _defer = 0;
   private AskWrapper _askWrapper = new AskWrapper(this);
