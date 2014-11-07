@@ -165,8 +165,10 @@ public class APIFlowBuilder implements FlowFetcher {
       info.put("modified", file.lastModified());
       
       // Copy it over
-      if (file.length() < EXPLODED_FILE_COPY_THRESHOLD) {
-        _log.info("coping file to DFS: " + dfsPath);
+      if (file.length() == 0) {
+        _log.info("skipping 0-length file: " + dfsPath);
+      } else if (file.length() < EXPLODED_FILE_COPY_THRESHOLD) {
+        _log.info("copying file to DFS: " + dfsPath);
         dfs.copyFile(file, dfsPath);
         info.put("dfs_uri", dfs.getUriFor(dfsPath));
       } else {
