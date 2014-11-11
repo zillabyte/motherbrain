@@ -77,7 +77,7 @@ public class AskWrapper implements Serializable {
     final String returnStream = UUID.randomUUID().toString();
     final TransactionalMessageWrapper wrapper = new TransactionalMessageWrapper(message, returnStream, returnMessage);
     final SynchronousQueue<Object> response = new SynchronousQueue<>();
-//      _log.info("Sending message "+message +" on stream "+stream+". Watching for response on "+returnStream);
+    _log.info("Sending message "+message +" on stream "+stream+". Watching for response on "+returnStream);
     
     // Watch for reply...
     Watcher watcher = _service.watchForMessage(wrapper.returnStream, new MessageHandler() {
