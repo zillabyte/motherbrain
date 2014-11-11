@@ -39,7 +39,7 @@ public class SourceFromBuffer extends Source {
 
   BufferConsumer _consumer;
   
-  BufferQuery _query;
+  BufferQuery _query = null;
   
   private JSONObject _snapshot;
 
@@ -133,35 +133,14 @@ public class SourceFromBuffer extends Source {
     }
   }
 
-  public Query concreteQuery() throws OperationException, InterruptedException {
-    final Query myConcreteQuery = this._concreteQuery; 
-    if (myConcreteQuery == null) {
-      synchronized (this) {
-        final Query myNewConcreteQuery = this._concreteQuery;
-        if (myNewConcreteQuery == null) {
-          final Query concreteQuery;
-          try {
-            concreteQuery = RelationsHelper.instance().concretifyQuery(this.topFlowId(), _bufferName, this.getTopFlow().getFlowConfig().getAuthToken());
-          } catch (APIException e) {
-            throw new OperationException(this, e);
-          }
-          this._concreteQuery = concreteQuery;
-          return concreteQuery;
-        }
-        return myNewConcreteQuery;
-      }
-    }
-    return myConcreteQuery;
-  }
   
-
   public String rawQuery(){
     return _bufferName;
   }
   
 
   public @NonNull List<ColumnDef> getValueColumnDefs() throws OperationException, InterruptedException {
-    return concreteQuery().valueColumns();
+    return _query.valueColumns();
   }
 
   @Override

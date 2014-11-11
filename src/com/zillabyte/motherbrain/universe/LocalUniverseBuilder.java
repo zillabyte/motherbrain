@@ -22,13 +22,11 @@ import com.zillabyte.motherbrain.flow.rpc.queues.MockQueueFactory;
 import com.zillabyte.motherbrain.flow.rpc.queues.QueueFactory;
 import com.zillabyte.motherbrain.metrics.Metrics;
 import com.zillabyte.motherbrain.metrics.MockMetrics;
-import com.zillabyte.motherbrain.relational.RelationDefFactory;
 import com.zillabyte.motherbrain.shell.LocalOsxShellFactory;
 import com.zillabyte.motherbrain.shell.ShellFactory;
 import com.zillabyte.motherbrain.shell.UbuntuEc2ShellFactory;
 import com.zillabyte.motherbrain.shell.UbuntuTeamCityShellFactory;
 import com.zillabyte.motherbrain.shell.UbuntuVagrantShellFactory;
-import com.zillabyte.motherbrain.test.helpers.MockRelationDefFactory;
 import com.zillabyte.motherbrain.top.BasicTopService;
 import com.zillabyte.motherbrain.top.TopService;
 import com.zillabyte.motherbrain.utils.Utils;
@@ -42,11 +40,6 @@ public class LocalUniverseBuilder {
   
   public LocalUniverseBuilder withAPIService(APIService s) {
     _universe._api = s;
-    return this;
-  }
-  
-  public LocalUniverseBuilder withRelationFactory(RelationDefFactory s) {
-    _universe._relFactory = s;
     return this;
   }
   
@@ -203,7 +196,6 @@ public class LocalUniverseBuilder {
         .withEnvironment(Environment.local())
         .withConfig(config)
         .withFlowBuilderFactory(new InplaceFlowBuilderFactory())
-        .withRelationFactory(new MockRelationDefFactory())
         .withTopService(new BasicTopService())
         .withFlowService(new LocalFlowService())
         .withDFSService(new LocalDFSService())
