@@ -12,7 +12,6 @@ import com.zillabyte.motherbrain.flow.buffer.BufferService;
 import com.zillabyte.motherbrain.flow.operations.multilang.builder.FlowBuilderFactory;
 import com.zillabyte.motherbrain.flow.rpc.queues.QueueFactory;
 import com.zillabyte.motherbrain.metrics.Metrics;
-import com.zillabyte.motherbrain.relational.RelationDefFactory;
 import com.zillabyte.motherbrain.shell.LocalOsxShellFactory;
 import com.zillabyte.motherbrain.shell.ShellFactory;
 import com.zillabyte.motherbrain.shell.UbuntuEc2ShellFactory;
@@ -29,11 +28,6 @@ public class UniverseBuilder {
   
   public UniverseBuilder withAPIService(APIService s) {
     _universe._api = s;
-    return this;
-  }
-  
-  public UniverseBuilder withRelationFactory(RelationDefFactory s) {
-    _universe._relFactory = s;
     return this;
   }
   

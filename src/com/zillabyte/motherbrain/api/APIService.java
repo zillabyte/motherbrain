@@ -16,7 +16,7 @@ public interface APIService {
 
   JSONObject getRelationConcretified(String flowId, String sql, String authToken)  throws APIException;
 
-  JSONObject postRelationSettings(String appId, String relationName, JSONArray jsonSchema, String bufferType, String authToken) throws APIException;
+  JSONObject postRelationSettingsForNextVersion(String relationName, JSONArray jsonSchema, String bufferType, String authToken) throws APIException;
 
   JSONObject postFlowState(String id, String newState, String authToken) throws APIException;
 

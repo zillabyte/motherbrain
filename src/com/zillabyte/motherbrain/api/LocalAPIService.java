@@ -31,7 +31,7 @@ public class LocalAPIService implements APIService {
   }
 
   @Override
-  public JSONObject postRelationSettings(String appId, String relationName, JSONArray jsonSchema, String bufferType, String authToken) throws APIException {
+  public JSONObject postRelationSettingsForNextVersion(String relationName, JSONArray jsonSchema, String bufferType, String authToken) throws APIException {
     // TODO Auto-generated method stub
     return null;
   }

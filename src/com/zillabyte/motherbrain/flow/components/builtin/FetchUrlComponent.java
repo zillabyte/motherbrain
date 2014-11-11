@@ -29,79 +29,62 @@ import com.zillabyte.motherbrain.utils.Utils;
 
 public class FetchUrlComponent {
 
-  protected static final int HTTP_TIMEOUT = 5000;
-  private static final int MAX_PARALLELISM = 50;
-  private static final int MAX_BODY_SIZE = 200_000;
-  private static Logger _log = Utils.getLogger(FetchUrlComponent.class);
+  public static class Handler extends Clumper {
+    private static final long serialVersionUID = 8362569227165803567L;
+    private transient AsyncHttpClient _asyncHttpClient;
 
-  
-  public static Component create(final FlowConfig config) {
-    
-    Component c = new Component("fetch_url", config);
-    ComponentStreamBuilder sb = c.createStream(
-        new ComponentInput(
-            "input",
-            ColumnDef.createString("url")
-            ), 
-        "stream");
-    
-    sb.aggregate(new Clumper("fetch", MAX_PARALLELISM) {
-      
-      private static final long serialVersionUID = 8362569227165803567L;
-      private transient AsyncHttpClient _asyncHttpClient;
+    public Handler(String name, int clumpCount) {
+      super(name, clumpCount);
+    }
 
-      
-      @Override
-      public void prepare() {
-        Builder builder = new AsyncHttpClientConfig.Builder();
-        AsyncHttpClientConfig asyncConfig = builder.setAllowPoolingConnection(true)
-            .setConnectionTimeoutInMs(HTTP_TIMEOUT)
-            .setRequestTimeoutInMs(HTTP_TIMEOUT)
-            .setFollowRedirects(false)
-            .build();
-        _asyncHttpClient = new AsyncHttpClient(asyncConfig);
-      }
-      
-      
-      @Override
-      public int getTargetParallelism() {
-        // TODO: fix this
-        return 20; 
+    @Override
+    public void prepare() {
+      Builder builder = new AsyncHttpClientConfig.Builder();
+      AsyncHttpClientConfig asyncConfig = builder.setAllowPoolingConnection(true)
+          .setConnectionTimeoutInMs(HTTP_TIMEOUT)
+          .setRequestTimeoutInMs(HTTP_TIMEOUT)
+          .setFollowRedirects(false)
+          .build();
+      _asyncHttpClient = new AsyncHttpClient(asyncConfig);
+    }
+
+    @Override
+    public int getTargetParallelism() {
+      // TODO: fix this
+      return 20; 
 //        if (config.containsKey("parallelism")) {
 //          return Integer.parseInt(  config.get("parallelism").toString() );
 //        } else {
 //          return super.getTargetParallelism();
 //        }
-      }
+    }
+
+    @Override
+    public void execute(List<MapTuple> tuples, final OutputCollector collector) throws OperationException {
       
+      if (tuples.isEmpty())
+        return;
       
-      @Override
-      public void execute(List<MapTuple> tuples, final OutputCollector collector) throws OperationException {
-        
-        if (tuples.isEmpty())
-          return;
-        
-        final CountDownLatch latch = new CountDownLatch(tuples.size());
-        
-        try { 
-          for(final MapTuple t : tuples) {
+      final CountDownLatch latch = new CountDownLatch(tuples.size());
+      
+      try { 
+        for(final MapTuple t : tuples) {
+          
+          // Prepare the URL
+          String rawUrl = (String)t.get("url");
+          if (rawUrl.contains("://") == false) rawUrl = "http://" + rawUrl;
+          final URI url = new URI(rawUrl);
+          
+          // Start the requests...
+          _asyncHttpClient.prepareGet(rawUrl).execute(new AsyncCompletionHandler<Void>(){
             
-            // Prepare the URL
-            String rawUrl = (String)t.get("url");
-            if (rawUrl.contains("://") == false) rawUrl = "http://" + rawUrl;
-            final URI url = new URI(rawUrl);
+            private int _size = 0;
             
-            // Start the requests...
-            _asyncHttpClient.prepareGet(rawUrl).execute(new AsyncCompletionHandler<Void>(){
-              
-              private int _size = 0;
-              
-              @Override
-              public Void onCompleted(Response response) throws Exception {
-                latch.countDown();
-  
+            @Override
+            public Void onCompleted(Response response) throws Exception {
+              try {
                 // Are we dealing with a non-text type? 
-                if (response.getContentType().contains("text") == false) {
+                if (response.getContentType() != null && response.getContentType().contains("text") == false) {
                   logger().error("skipping " + url.toString() + " because it is not text");
                   return null;
                 }
@@ -117,41 +100,66 @@ public class FetchUrlComponent {
                 }
                 collector.emit(t);
                 return null;
-              }
-  
-              @Override
-              public void onThrowable(Throwable e){
+              } catch(Exception e) {
+                _log.error("error in fetcher: " + e);
+                throw new Exception(e);
+              } finally {
                 latch.countDown();
-                logger().error("unable to fetch: " + url.toString() + " (" + e.getMessage() + ")");
               }
-              
-              @Override
-              public STATE onBodyPartReceived(HttpResponseBodyPart bodyPart) throws Exception {
-                _size += bodyPart.length();
-                if (_size > MAX_BODY_SIZE) {
-                  logger().error("skipping " + url.toString() + " because it is too large");
-                  return STATE.ABORT;
-                }
-                return super.onBodyPartReceived(bodyPart);
+            }
+ 
+            @Override
+            public void onThrowable(Throwable e){
+              latch.countDown();
+              logger().error("unable to fetch: " + url.toString() + " (" + e.getMessage() + ")");
+              e.printStackTrace();
+            }
+            
+            @Override
+            public STATE onBodyPartReceived(HttpResponseBodyPart bodyPart) throws Exception {
+              _size += bodyPart.length();
+              if (_size > MAX_BODY_SIZE) {
+                logger().error("skipping " + url.toString() + " because it is too large");
+                return STATE.ABORT;
               }
-              
-            });
-          }
-          
-          // Wait for the above to finish...
-          latch.await();
-          
-        } catch (InterruptedException e) {
-          _log.error("interrupted");
-        } catch (IOException e) {
-          throw new OperationException(this, e);
-        } catch (URISyntaxException e1) {
-          throw new OperationException(this, e1);
+              return super.onBodyPartReceived(bodyPart);
+            }
+            
+          });
         }
         
+        // Wait for the above to finish...
+        latch.await();
+        
+      } catch (InterruptedException e) {
+        _log.error("interrupted");
+      } catch (IOException e) {
+        throw new OperationException(this, e);
+      } catch (URISyntaxException e1) {
+        throw new OperationException(this, e1);
       }
       
-    });
+    }
+  }
+
+
+  protected static final int HTTP_TIMEOUT = 5000;
+  private static final int MAX_PARALLELISM = 50;
+  private static final int MAX_BODY_SIZE = 400_000;
+  private static Logger _log = Utils.getLogger(FetchUrlComponent.class);
+
+  
+  public static Component create(final FlowConfig config) {
+    
+    Component c = new Component("fetch_url", config);
+    ComponentStreamBuilder sb = c.createStream(
+        new ComponentInput(
+            "input",
+            ColumnDef.createString("url")
+            ), 
+        "stream");
+    
+    sb.aggregate(new Handler("fetch", MAX_PARALLELISM));
     
     sb.outputs(new ComponentOutput(
         "output",

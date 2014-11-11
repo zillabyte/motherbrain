@@ -139,7 +139,9 @@ public class PassiveWorkerPercentageAndAbsoluteOperationErrorStrategy implements
       if (errorPercentage > _maxErrorPercentage) {
         _op.logger().error("Operation instance "+_op.operationId()+" has exceeded "+_maxErrorPercentage+"% error rate on tuples. If all instances of this operation exceed this threshold, the flow will be shut down.");
         try {
-          _op.transitionToState("SUSPECT", true);
+          if (_op.inState("SUSPECT", "KILLING", "KILLED", "ERROR", "ERRORING") == false) {
+            _op.transitionToState("SUSPECT", true);
+          }
         } catch (StateMachineException | CoordinationException | TimeoutException e) {
           throw new OperationException(_op, e);
         }
