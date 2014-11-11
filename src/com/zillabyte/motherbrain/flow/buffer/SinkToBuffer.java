@@ -33,17 +33,24 @@ public class SinkToBuffer extends Sink {
   private static Logger _log = Logger.getLogger(SinkToBuffer.class);
 
   BufferProducer _producer;
-  private String _topicName;
+  //private String _bufferName;
+  //private Integer _cycle = null;
   private RelationDef _relation;
-  private Integer _cycle;
-  public SinkToBuffer(String id, List<ColumnDef> columns) {
-    super(id);
-    
-    _relation = new RelationDef(id, id, columns);
-    _topicName = id;
+  private BufferTopic _topic;
+  
+  public SinkToBuffer(String relId, BufferTopic topic, List<ColumnDef> columns) {
+    super(relId);
+    _relation = new RelationDef(relId, relId, columns);
     _log.info("Instantiating the sink");
-    
-    
+     _topic = topic;
+  }
+  
+  public SinkToBuffer(BufferTopic topic, List<ColumnDef> columns) {
+    this(topic.getBufferName(), topic, columns);
+  }
+  
+  public SinkToBuffer(String id, Integer cycle, List<ColumnDef> columns) {
+    this(id, new BufferTopic(id, cycle), columns);
   }
   
   @SuppressWarnings("unchecked")
@@ -88,27 +95,30 @@ public class SinkToBuffer extends Sink {
     //TODO: Credentials
     
     String concreteTableName = bufferSettings.getString("topic");
+    Integer cycle = bufferSettings.getInt("cycle"); 
     _relation = new RelationDef(nodeEmitRelation, concreteTableName, columnTypes);
-    //TODO: Change this to be cycle_id or something similar (For jake)
-    _cycle = config.getFlowVersion();
-    // Set the final topic name here. Changes for each app push.
-    _topicName = _relation.concreteName() + "_cycle_" + _cycle;
-
+    _topic = new BufferTopic(_relation.concreteName(), cycle);
+    
     // Have to make the JSON for sending to the sink.
     // Write to schloss
     final BufferService bufferService = Universe.instance().bufferService();
 
-    bufferService.sinkBuffer(_topicName, shardPath, shardPrefix, bucket);
+    bufferService.sinkBuffer(_topic, shardPath, shardPrefix, bucket);
     int waitRetry = 1;
-    while(!bufferService.hasTopic(_topicName)){
+    while(!bufferService.hasTopic(_topic)){
       waitRetry += 1;
       if(waitRetry > 30){
         throw new RuntimeException("Kafka topic wasn't created in 30 seconds. It's likely that metamorphosis screwed up.");
       }
-      _log.info("Waiting for the topic to be created. Attempt #" + waitRetry);
+      _log.info("Waiting for the topic " + _topic + " to be created. Attempt #" + waitRetry);
       Utils.sleep(1000); // This is before we deploy the topology to storm. 
     }
     
+  }
+  
+  
+  public BufferTopic getTopic() {
+    return _topic;
   }
   
   /***
@@ -176,9 +186,6 @@ public class SinkToBuffer extends Sink {
     _producer.pushTuple(t);
   }
 
-  public String getTopicName(){
-    return _topicName;
-  }
   
   @Override
   public void onFinalizeDeclare() throws OperationException, InterruptedException { 
