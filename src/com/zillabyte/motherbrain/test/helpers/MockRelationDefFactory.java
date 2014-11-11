@@ -1,14 +1,14 @@
 package com.zillabyte.motherbrain.test.helpers;
 
+import net.sf.json.JSONObject;
+import net.sf.json.util.JSONBuilder;
+import net.sf.json.util.JSONStringer;
+
 import com.zillabyte.motherbrain.flow.config.FlowConfig;
 import com.zillabyte.motherbrain.relational.ColumnDef;
 import com.zillabyte.motherbrain.relational.RelationDefFactory;
 import com.zillabyte.motherbrain.universe.Universe;
 import com.zillabyte.motherbrain.utils.JSONUtil;
-
-import net.sf.json.JSONObject;
-import net.sf.json.util.JSONBuilder;
-import net.sf.json.util.JSONStringer;
 
 public class MockRelationDefFactory extends RelationDefFactory {
 
@@ -24,6 +24,7 @@ public class MockRelationDefFactory extends RelationDefFactory {
      builder.object()
        .key("buffer_settings").object()
          .key("topic").value(relationName)
+         .key("cycle").value(1)
          .key("source").object()
            .key("type").value("s3")
            .key("retry").value(0)

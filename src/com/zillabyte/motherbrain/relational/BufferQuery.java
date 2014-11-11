@@ -1,5 +1,7 @@
 package com.zillabyte.motherbrain.relational;
 
+import com.zillabyte.motherbrain.flow.buffer.BufferTopic;
+
 import net.sf.json.JSONObject;
 
 public class BufferQuery extends AliasedQuery {
@@ -17,8 +19,9 @@ public class BufferQuery extends AliasedQuery {
     return _bufferSettings;
   }
   
-  public String getTopic(){
-    return _bufferSettings.getString("topic");
+  public BufferTopic getTopic(){
+    return new BufferTopic(_bufferSettings.getString("topic"), _bufferSettings.getInt("cycle"));
   }
+  
 
 }

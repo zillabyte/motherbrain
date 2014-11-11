@@ -21,14 +21,14 @@ public class MockBufferProducer implements BufferProducer, Serializable {
   
   public MockBufferProducer(SinkToBuffer operation) {
     _operation = operation;
-    _relationName = _operation.getTopicName();
+    _relationName = _operation.getTopic().getFullName();
   }
 
   @Override
   public void pushTuple(MapTuple t) {
     synchronized (_tuples) {
       _tuples.put(_relationName, t);
-      MeteredLog.info(_log, "size for relation: " + _relationName + " is: " + size(_relationName));
+      _log.info("size for relation: " + _relationName + " is: " + size(_relationName));
     }
     
   }

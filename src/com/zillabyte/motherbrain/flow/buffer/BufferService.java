@@ -6,9 +6,9 @@ public interface BufferService {
 
   public void maybeFillBuffer(BufferQuery query);
 
-  public void sinkBuffer(String _topicName, String shardPath, String shardPrefix, String bucket);
+  public void sinkBuffer(BufferTopic _topic, String shardPath, String shardPrefix, String bucket);
   
-  public boolean hasTopic(String topic);
+  public boolean hasTopic(BufferTopic _topic);
   
 //  public List<String> getSeedBrokers();
 //

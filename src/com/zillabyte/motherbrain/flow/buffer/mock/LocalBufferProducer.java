@@ -23,10 +23,10 @@ public class LocalBufferProducer implements BufferProducer {
     if(Universe.instance().env().isLocal()) {
       String outputFile = Universe.instance().config().getOrException("output.prefix");
       if(!outputFile.equals("")) {
-        outputFile += "_"+_operation.getTopicName()+".csv";
+        outputFile += "_"+_operation.getTopic().getFullName()+".csv";
         try {
           String outputFilePath = Universe.instance().config().getOrException("directory")+"/"+outputFile;
-          _operation.logger().writeLog("Writing output for relation ["+_operation.getTopicName()+"] to file: "+outputFilePath, OperationLogger.LogPriority.RUN);
+          _operation.logger().writeLog("Writing output for relation ["+_operation.getTopic().getFullName()+"] to file: "+outputFilePath, OperationLogger.LogPriority.RUN);
           _csvOutput = new CsvWriter(new FileWriter(outputFilePath), ',');
         } catch (IOException e) {
           throw new RuntimeException(e);
