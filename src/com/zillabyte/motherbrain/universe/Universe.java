@@ -16,7 +16,6 @@ import com.zillabyte.motherbrain.flow.error.strategies.ErrorStrategyFactory;
 import com.zillabyte.motherbrain.flow.operations.multilang.builder.FlowBuilderFactory;
 import com.zillabyte.motherbrain.flow.rpc.queues.QueueFactory;
 import com.zillabyte.motherbrain.metrics.Metrics;
-import com.zillabyte.motherbrain.relational.RelationDefFactory;
 import com.zillabyte.motherbrain.shell.ShellFactory;
 import com.zillabyte.motherbrain.top.TopService;
 import com.zillabyte.motherbrain.utils.dfs.DFSService;
@@ -42,7 +41,6 @@ public class Universe implements Serializable {
   // Support Services/Factories
 
   protected  APIService _api = null;
-  protected  RelationDefFactory _relFactory = null;
   protected  SSHFactory _sshFactory = null;
   protected  FileFactory _fileFactory = null;
   protected  LoggerFactory _loggerFactory = null;
@@ -95,14 +93,6 @@ public class Universe implements Serializable {
   }
   
   
-
-  /***
-   * 
-   */
-  public RelationDefFactory relationFactory() {
-    return this._relFactory;
-  }
-
   
   public LoggerFactory loggerFactory() {
     return this._loggerFactory;

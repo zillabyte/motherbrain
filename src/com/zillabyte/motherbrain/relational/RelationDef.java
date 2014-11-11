@@ -76,5 +76,9 @@ public class RelationDef implements Serializable {
     this._valueColumns.add(col);
   }
 
+  public void setConcreteName(String concreteTableName) {
+    this.concreteName = concreteTableName;
+  }
+
   
 }

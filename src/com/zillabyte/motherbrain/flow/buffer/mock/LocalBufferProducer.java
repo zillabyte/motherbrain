@@ -2,14 +2,16 @@ package com.zillabyte.motherbrain.flow.buffer.mock;
 
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import com.google.common.collect.Lists;
 import com.google.monitoring.runtime.instrumentation.common.com.google.common.base.Throwables;
-import com.zillabyte.motherbrain.api.RelationsHelper;
+import com.zillabyte.motherbrain.api.APIException;
 import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.buffer.BufferProducer;
 import com.zillabyte.motherbrain.flow.buffer.SinkToBuffer;
-import com.zillabyte.motherbrain.relational.ColumnDef;
 import com.zillabyte.motherbrain.universe.Universe;
+import com.zillabyte.motherbrain.utils.Utils;
 
 public class LocalBufferProducer implements BufferProducer {
 
@@ -18,8 +20,8 @@ public class LocalBufferProducer implements BufferProducer {
   private SinkToBuffer _operation;
   private List<MapTuple> _buffer = Lists.newLinkedList();
   private long _currentBufferByteSize = 0L;
-  private boolean _pushedSettings = false;
   private String _authToken;
+  private static Logger _log = Utils.getLogger(LocalBufferProducer.class);
 
   public LocalBufferProducer(SinkToBuffer operation) {
     _operation = operation;
@@ -42,26 +44,18 @@ public class LocalBufferProducer implements BufferProducer {
       
       // First... create the relation
       if (_buffer.size() > 0) {
-        
-        // Push settings? 
-        if (_pushedSettings == false) {
-          RelationsHelper.instance().postRelationConfig(
-              _operation.getTopFlow().getFlowConfig(), 
-              _operation.getRelation().name(), 
-              _operation.getRelation().valueColumns().toArray(new ColumnDef[] {}));
-          _pushedSettings = false;
-        }
             
         // Now, flush it...
         Universe.instance().api().appendRelation(
-            _operation.getRelation().name(),
+            _operation.getRelation().concreteName(),
             _buffer,
             _operation.getTopFlow().getFlowConfig().getAuthToken()
             );
       }
       
-    } catch(Exception e) {
-      Throwables.propagate(e);
+    } catch(APIException e) {
+      //Throwables.propagate(e);
+      _log.error("api exception: " + e);
     } finally {
       _buffer.clear();
       _currentBufferByteSize = 0L;
