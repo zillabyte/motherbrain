@@ -49,6 +49,8 @@ public class Unique extends Function {
   private BloomFilter<MapTuple> getFilter(Object batch) {
     if (_filters.containsKey(batch) == false) {
       Funnel<MapTuple> funnel = new Funnel<MapTuple>() {
+        private static final long serialVersionUID = 3504134639163725164L;
+
         @Override
         public void funnel(MapTuple from, PrimitiveSink into) {
           if (_uniqueFields == null) {

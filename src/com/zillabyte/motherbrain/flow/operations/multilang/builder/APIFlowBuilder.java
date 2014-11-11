@@ -156,7 +156,7 @@ public class APIFlowBuilder implements FlowFetcher {
       // Init 
       Path path = Paths.get(file.getAbsolutePath());
       Path rel = rootPath.relativize(path);
-      String dfsPath = "/flow_files/" + concreteId + "/v" + version + "/" + rel.toString();
+      String dfsPath = "/flow_files/" + concreteId + "/cycle_" + version + "/" + rel.toString();
       JSONObject info = new JSONObject();
 
       // Meta hash...
