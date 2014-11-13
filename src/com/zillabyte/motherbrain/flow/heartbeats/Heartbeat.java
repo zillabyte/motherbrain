@@ -1,6 +1,7 @@
 package com.zillabyte.motherbrain.flow.heartbeats;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledFuture;
 
@@ -31,14 +32,15 @@ public class Heartbeat {
   private long _lastHeartbeat = System.currentTimeMillis();
   private Exception _unhandledException = null;
   private Future<Void> _heavyHeartbeat;
+  private ExecutorService _executor;
 
   
   /***
    * 
    * @param op
    */
-  public Heartbeat(Operation op, long tickInterval) {
-    this(op);
+  public Heartbeat(Operation op, long tickInterval, ExecutorService exec) {
+    this(op, exec);
     _tickInterval = tickInterval;
   }
   
@@ -47,10 +49,11 @@ public class Heartbeat {
    * 
    * @param op
    */
-  public Heartbeat(Operation op) {
+  public Heartbeat(Operation op, ExecutorService exec) {
     _op = op;
     _log = new Log4jWrapper(Heartbeat.class, _op);
     _tickInterval = DEFAULT_HEARTBEAT_INTERVAL_MS;
+    _executor = exec;
   }
   
   
@@ -156,7 +159,7 @@ public class Heartbeat {
       // take a long time, so we don't block the main heartbeat. 
       if (_heavyHeartbeat == null || _heavyHeartbeat.isDone()) {
         if (_heavyHeartbeat != null) _heavyHeartbeat.get();  // propagate exceptions
-        _heavyHeartbeat = Utils.run(new Callable<Void>() {
+        _heavyHeartbeat = _executor.submit(new Callable<Void>() {
           @Override
           public Void call() throws Exception {
 
@@ -247,8 +250,8 @@ public class Heartbeat {
    * @return
    * @throws HeartbeatException 
    */
-  public static Heartbeat create(Operation operation) throws HeartbeatException {
-    Heartbeat hb = new Heartbeat(operation);
+  public static Heartbeat create(Operation operation, ExecutorService exec) throws HeartbeatException {
+    Heartbeat hb = new Heartbeat(operation, exec);
     hb.start();
     return hb;
   }

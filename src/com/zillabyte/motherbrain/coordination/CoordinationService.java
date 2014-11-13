@@ -1,6 +1,7 @@
 package com.zillabyte.motherbrain.coordination;
 
 import java.io.Serializable;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeoutException;
 
 public interface CoordinationService extends Serializable {
@@ -92,7 +93,7 @@ public interface CoordinationService extends Serializable {
    * @throws CoordinationException 
    * @throws TimeoutException
    */
-  public void sendTransactionalMessage(String channel, Object message, long timeout) throws CoordinationException, TimeoutException;
+  public void sendTransactionalMessage(ExecutorService exec, String channel, Object message, long timeout) throws CoordinationException, TimeoutException;
   
   
   /***
@@ -104,7 +105,7 @@ public interface CoordinationService extends Serializable {
    * @throws CoordinationException
    * @throws TimeoutException
    */
-  public Object ask(String channel, Object message, long timeout) throws CoordinationException, TimeoutException;
+  public Object ask(ExecutorService exec, String channel, Object message, long timeout) throws CoordinationException, TimeoutException;
   
   
   
@@ -116,7 +117,7 @@ public interface CoordinationService extends Serializable {
    * @return
    * @throws CoordinationException
    */
-  public Watcher watchForMessage(String channel, MessageHandler messageHandler) throws CoordinationException;
+  public Watcher watchForMessage(ExecutorService exec, String channel, MessageHandler messageHandler) throws CoordinationException;
   
   
   /***
@@ -129,6 +130,6 @@ public interface CoordinationService extends Serializable {
    * @return
    * @throws CoordinationException
    */
-  public Watcher watchForAsk(String channel, AskHandler askHandler) throws CoordinationException;
+  public Watcher watchForAsk(ExecutorService exec, String channel, AskHandler askHandler) throws CoordinationException;
   
 }

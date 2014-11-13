@@ -13,6 +13,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -92,6 +93,8 @@ public abstract class Operation implements Serializable {
   private Long _initial_stage_timeout_ms;
   private Long _pre_prepare_stage_timeout_ms;
   private Long _prepare_stage_timeout_ms;
+  
+  protected transient ExecutorService _executor = null;
 
   private SerializableMonitor _messageMonitor = new SerializableMonitor();
 
@@ -569,7 +572,7 @@ public abstract class Operation implements Serializable {
    * @throws CoordinationException
    * @throws StateMachineException
    */
-  public synchronized final void handleCleanup() throws Exception {
+  public synchronized final void handleCleanup()  {
 
     // Sanity...
     if (inState("KILLING", "KILLED"))
@@ -577,19 +580,44 @@ public abstract class Operation implements Serializable {
 
     // INIT
     _log.info(instanceName() + " cleaning up: " + this.toString());
-    if (!inState("ERROR", "ERRORING"))
-      transitionToState("KILLING");
+    if (!inState("ERROR", "ERRORING")) {
+      try {
+        transitionToState("KILLING");
+      } catch (StateMachineException | CoordinationException | TimeoutException e) {
+        e.printStackTrace();
+      }
+    }
 
-    // Cleanup
-    stopWatchingFlowCommands();
-    cleanup();
+    // Stop listeners... 
+    try {
+      stopWatchingFlowCommands();
+    } catch (CoordinationException e) {
+      e.printStackTrace();
+    }
+    
+    try {
+      cleanup();
+    } catch (OperationException | InterruptedException e) {
+      e.printStackTrace();
+    }
+    
     if (_heartbeat != null)
       _heartbeat.shutdown();
 
     // Done
-    if (!inState("ERROR", "ERRORING"))
-      transitionToState("KILLED");
+    if (!inState("ERROR", "ERRORING")) {
+      try {
+        transitionToState("KILLED");
+      } catch (StateMachineException | CoordinationException | TimeoutException e) {
+        e.printStackTrace();
+      }
+    }
 
+    // Stop threads related to this operaiton...
+    if (_executor != null) {
+      _log.info("stopping executor...");
+      _executor.shutdownNow();
+    }
   }
 
   /***
@@ -612,7 +640,7 @@ public abstract class Operation implements Serializable {
       Universe
           .instance()
           .state()
-          .sendTransactionalMessage(this.flowStateKey(),
+          .sendTransactionalMessage(_executor, this.flowStateKey(),
               OperationMessage.create(this, command, payload),
               _transactional_msg_timeout);
     }
@@ -1147,6 +1175,9 @@ public abstract class Operation implements Serializable {
             Lock lock = Universe.instance().state().lock("flow_instance_index_" + lockPrefix());
             if (lock == null) throw new NullPointerException("null lock?: " + Universe.instance().state());
 
+            // Create an executor for hearts & state services
+            _executor = Utils.createPrefixedExecutorPool("flow-" + topFlowId() + "-operation-" + instanceName());
+            
             try {
 
               // Get the next instance id..
@@ -1169,7 +1200,7 @@ public abstract class Operation implements Serializable {
             _operationLogger = Universe.instance().loggerFactory().logger(topFlowId(), instanceName(), getTopFlow().getFlowConfig().getAuthToken());
 
             // Start the heartbeat
-            _heartbeat = Heartbeat.create(Operation.this);
+            _heartbeat = Heartbeat.create(Operation.this, _executor);
             reportInfo(); // report to flow that we are alive
 
             // Start logging to the user...
@@ -1278,7 +1309,7 @@ public abstract class Operation implements Serializable {
       _flowCommandWatcher  = Universe
           .instance()
           .state()
-          .watchForMessage(flowStateKey() + "/operation_commands",
+          .watchForMessage(_executor, flowStateKey() + "/operation_commands",
               new MessageHandler() {
                 @Override
                 public final void handleNewMessage(String key, Object command)
@@ -1317,15 +1348,8 @@ public abstract class Operation implements Serializable {
    */
   protected void handleFlowCommand(String command) throws Exception {
     if (command.equalsIgnoreCase("die")) {
-      try {
-        _operationLogger.writeLog("killing ourself...(" + this.instanceName() + ")", OperationLogger.LogPriority.RUN);
-        handleCleanup();
-      } catch (MultiLangException ex) {
-        throw new OperationException(this, ex);
-      } catch (StateMachineException | TimeoutException | CoordinationException e) {
-        _log.warn("An error occured while trying to transition to KILLING state: "
-            + e.getMessage());
-      }
+      _operationLogger.writeLog("killing ourself...(" + this.instanceName() + ")", OperationLogger.LogPriority.RUN);
+      handleCleanup();
 
     } else if (command.equalsIgnoreCase("report")) {
 
