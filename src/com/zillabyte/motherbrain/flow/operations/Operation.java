@@ -1223,13 +1223,11 @@ public abstract class Operation implements Serializable {
 
       try {
         if (this.getState().equals("ERROR")) {
-          _operationLogger.writeLog("Error detected during prepare phase",
-              OperationLogger.LogPriority.ERROR);
+          _operationLogger.writeLog("Error detected during prepare phase", OperationLogger.LogPriority.ERROR);
         } else {
           // Success
           postPrepare();
-          _operationLogger.writeLog("Prepare complete",
-              OperationLogger.LogPriority.STARTUP);
+          _operationLogger.writeLog("Prepare complete", OperationLogger.LogPriority.STARTUP);
         }
       } catch (Exception e) {
         handleFatalError(e);

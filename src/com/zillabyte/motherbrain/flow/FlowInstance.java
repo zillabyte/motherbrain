@@ -182,7 +182,7 @@ public class FlowInstance implements Serializable {
           try {
             killImpl(FlowState.ERROR);
           } catch (Exception e) {
-            throw new FlowException(_flow, e);
+            throw (FlowException) new FlowException(_flow, e).setAllMessages("An error occurred when trying to kill flow. Most of the time this shouldn't matter.");
           }
         } else {
           transitionToState(newState);
@@ -205,7 +205,7 @@ public class FlowInstance implements Serializable {
           notifyOfNewState(_state.toString());
         }
       } catch (TimeoutException e) {
-        throw new StateMachineException(e);
+        throw (StateMachineException) new StateMachineException(e).setAllMessages("Timeout occurred during transition from "+_state+" to "+target+" state.");
       } finally {
         synchronized (_stateChangeMonitor) {
           _stateChangeMonitor.notifyAll();
@@ -337,7 +337,7 @@ public class FlowInstance implements Serializable {
       }
       if (infiniteLoop) {
         if (curState == FlowState.ERROR) {
-          throw new StateMachineException("Reached state ERROR unexpectedly!  Expected " + Arrays.toString(states));
+          throw (StateMachineException) new StateMachineException("Reached state ERROR unexpectedly! Expected " + Arrays.toString(states)).setUserMessage("Reached ERROR state unexpectedly!").adviseRetry();
         }
       } else if (System.nanoTime() - start >= timeoutNanos) {
         break;

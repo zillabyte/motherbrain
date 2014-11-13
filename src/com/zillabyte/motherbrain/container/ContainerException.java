@@ -12,6 +12,10 @@ public class ContainerException extends MotherbrainException {
 
   private static final long serialVersionUID = -789788594951874062L;
 
+  public ContainerException() {
+    super();
+  }
+  
   public ContainerException(String s) {
     super(s);
   }

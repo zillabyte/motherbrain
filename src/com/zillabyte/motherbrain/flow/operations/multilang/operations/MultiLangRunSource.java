@@ -98,7 +98,7 @@ public class MultiLangRunSource extends Source implements MultiLangOperation {
           _handler.takeNextTuple();
         } else {
           // Otherwise something is weird...
-          throw (OperationException) new OperationException(this).setInternalMessage("attempt to get nextTuple when queue is not empty: " + _handler.tupleObserver().queue());
+          throw (OperationException) new OperationException(this, "Attempt to get nextTuple when there are still queued tuples: " + _handler.tupleObserver().queue()).setUserMessage("If you are seeing this message it likely indicates an error occurred in the multilang source process (scroll up to find it!).");
         }
       }
 

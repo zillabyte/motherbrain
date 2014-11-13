@@ -26,7 +26,7 @@ public class StateMachineHelper {
 //      log.info("Transitioning from "+oldState.toString()+" to "+newState.toString());
       return newState;
     } else {
-      throw (StateMachineException) new StateMachineException().setAllMessages("Cannot transition from " + oldState + " to " + newState);
+      throw (StateMachineException) new StateMachineException().setAllMessages("Cannot transition from " + oldState + " to " + newState+".");
     }
 
   }
