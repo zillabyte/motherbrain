@@ -9,13 +9,14 @@ import com.zillabyte.motherbrain.flow.buffer.BufferFlusher;
 import com.zillabyte.motherbrain.flow.buffer.BufferProducer;
 import com.zillabyte.motherbrain.flow.buffer.SinkToBuffer;
 import com.zillabyte.motherbrain.flow.buffer.SourceFromBuffer;
+import com.zillabyte.motherbrain.flow.operations.OperationException;
 
 public class LocalDevBufferClientFactory implements BufferClientFactory {
 
   private List<LocalDevBufferProducer> _producers = Lists.newLinkedList();
   
   @Override
-  public BufferConsumer createConsumer(SourceFromBuffer operation) {
+  public BufferConsumer createConsumer(SourceFromBuffer operation) throws OperationException {
     return new LocalBufferConsumer(operation);
   }
 

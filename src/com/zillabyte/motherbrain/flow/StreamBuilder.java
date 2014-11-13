@@ -35,7 +35,7 @@ public abstract class StreamBuilder {
       super(flow, last, streamName);
     }
 
-    public StreamBuilder sink(Sink fn) {
+    public StreamBuilder sink(Sink fn) throws FlowCompilationException {
       _graph.connect(_last, fn, _streamName);
       _last = fn;
       fn.setContainerFlow(_flow);
@@ -59,7 +59,7 @@ public abstract class StreamBuilder {
       super(flow, last, streamName);
     }
 
-    public StreamBuilder outputs(ComponentOutput fn) {
+    public StreamBuilder outputs(ComponentOutput fn)  throws FlowCompilationException {
       _graph.connect(_last, fn, _streamName);
       _last = fn;
       fn.setContainerFlow(_flow);
@@ -102,14 +102,14 @@ public abstract class StreamBuilder {
     if (_flow == null) throw new NullPointerException("flow has not been set");
   }
 
-  public StreamBuilder each(Function fn) {
+  public StreamBuilder each(Function fn) throws FlowCompilationException {
     _graph.connect(_last, fn, _streamName);
     _last = fn;
     fn.setContainerFlow(_flow);
     return this;
   }
   
-  public StreamBuilder each(Function fn, Boolean loopBack, Integer maxIter) {
+  public StreamBuilder each(Function fn, Boolean loopBack, Integer maxIter) throws FlowCompilationException {
     _graph.connect(_last, fn, _streamName, loopBack, maxIter);
     _last = fn;
     fn.setContainerFlow(_flow);
@@ -133,7 +133,7 @@ public abstract class StreamBuilder {
   }
   
   
-  public StreamBuilder aggregate(AggregationOperation fn) {
+  public StreamBuilder aggregate(AggregationOperation fn) throws FlowCompilationException {
     _graph.connect(_last, fn, _streamName);
     _last = fn;
     fn.setContainerFlow(_flow);
@@ -141,12 +141,12 @@ public abstract class StreamBuilder {
   }
   
   
-  public StreamBuilder groupBy(GroupBy fn) {
+  public StreamBuilder groupBy(GroupBy fn) throws FlowCompilationException {
     return aggregate(fn);
   }
   
 
-  public StreamBuilder joinWith(StreamBuilder rawRhs, Join join) {
+  public StreamBuilder joinWith(StreamBuilder rawRhs, Join join) throws FlowCompilationException {
     StreamBuilder rhs = rawRhs;
     _graph.connect(_last, join, _streamName);
     _graph.connect(rhs._last, join, rhs._streamName);
@@ -156,7 +156,7 @@ public abstract class StreamBuilder {
   }
   
 
-  public StreamBuilder joinWith(StreamBuilder rhs, Fields lhsJoinFields, Fields rhsJoinFields, JoinType joinType, OperationConfig config) {
+  public StreamBuilder joinWith(StreamBuilder rhs, Fields lhsJoinFields, Fields rhsJoinFields, JoinType joinType, OperationConfig config) throws FlowCompilationException {
     return joinWith(rhs, new Join("join." + this._streamName + "-" + rhs._streamName, this._streamName, lhsJoinFields, rhs.streamName(), rhsJoinFields, joinType, config));
   }
   
@@ -165,18 +165,18 @@ public abstract class StreamBuilder {
     return this._streamName;
   }
 
-  public StreamBuilder joinWith(StreamBuilder rhs, Fields lhsJoinFields, Fields rhsJoinFields) {
+  public StreamBuilder joinWith(StreamBuilder rhs, Fields lhsJoinFields, Fields rhsJoinFields) throws FlowCompilationException {
     return joinWith(rhs, lhsJoinFields, rhsJoinFields, JoinType.INNER, OperationConfig.createEmpty());
   }
 
   
   
-  public StreamBuilder joinWith(StreamBuilder rhs, Fields joinFields) {
+  public StreamBuilder joinWith(StreamBuilder rhs, Fields joinFields) throws FlowCompilationException {
     return joinWith(rhs, joinFields, joinFields);
   }
   
 
-  public StreamBuilder joinWith(StreamBuilder rhs, Fields fields, JoinType type) {
+  public StreamBuilder joinWith(StreamBuilder rhs, Fields fields, JoinType type) throws FlowCompilationException {
     return joinWith(rhs, fields, fields, type, OperationConfig.createEmpty());
   }
 
