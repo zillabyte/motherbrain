@@ -26,7 +26,6 @@ import org.javatuples.Triplet;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.monitoring.runtime.instrumentation.common.com.google.common.collect.LinkedListMultimap;
 import com.zillabyte.motherbrain.benchmarking.Benchmark;

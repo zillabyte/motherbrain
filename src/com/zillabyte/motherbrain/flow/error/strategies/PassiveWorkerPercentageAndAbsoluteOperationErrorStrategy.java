@@ -117,7 +117,7 @@ public class PassiveWorkerPercentageAndAbsoluteOperationErrorStrategy implements
       
     } else if (error instanceof MaxIterationsExceededException) {
       
-      throw new OperationException(_op, error);
+      throw (OperationException) new OperationException(_op, error).setUserMessage("Maximum number of loop-back iterations exceeded in \"" + _op.instanceName() + "\".");
       
     } else if (Utils.isCause(error, ProcessTimeoutException.class)) {
       
@@ -143,7 +143,7 @@ public class PassiveWorkerPercentageAndAbsoluteOperationErrorStrategy implements
             _op.transitionToState("SUSPECT", true);
           }
         } catch (StateMachineException | CoordinationException | TimeoutException e) {
-          throw new OperationException(_op, e);
+          throw (OperationException) new OperationException(_op, e).setUserMessage("Error transitioning to SUSPECT state.");
         }
       }
     }
@@ -154,7 +154,7 @@ public class PassiveWorkerPercentageAndAbsoluteOperationErrorStrategy implements
       try {
         _op.transitionToState("SUSPECT", true);
       } catch (StateMachineException | CoordinationException | TimeoutException e) {
-        throw new OperationException(_op, e);
+        throw (OperationException) new OperationException(_op, e).setUserMessage("Error transitioning to SUSPECT state.");
       }
     }
     

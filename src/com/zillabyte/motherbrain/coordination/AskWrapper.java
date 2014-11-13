@@ -100,11 +100,11 @@ public class AskWrapper implements Serializable {
       
       // Sanity
       if (o == null ) throw new TimeoutException("Timeout waiting for response on stream: " + stream);
-      if (o instanceof Exception) throw new RemoteCoordinationException(((Exception)o));
+      if (o instanceof Exception) throw (RemoteCoordinationException) new RemoteCoordinationException(((Exception)o)).adviseRetry();
       debug("response received "+stream);
 
     } catch(InterruptedException e) {
-      throw new CoordinationException(e);
+      throw (CoordinationException) new CoordinationException(e).adviseRetry();
       
     } finally {
       debug("unsubscribing");
@@ -175,7 +175,7 @@ public class AskWrapper implements Serializable {
       
       // Errors
       if (reply instanceof Exception) {
-        throw new RemoteCoordinationException((Exception)reply);
+        throw (RemoteCoordinationException) new RemoteCoordinationException((Exception)reply).adviseRetry();
       }
       
       // Done
@@ -209,8 +209,8 @@ public class AskWrapper implements Serializable {
         Object value = map.get("value");
         
         // Sanity checks
-        if (value == null) throw new RedisException("value should not be null!");
-        if (responseStream == null) throw new RedisException("responseStream should not be null!");
+        if (value == null) throw (RedisException) new RedisException("value should not be null!").adviseRetry();
+        if (responseStream == null) throw (RedisException) new RedisException("responseStream should not be null!").adviseRetry();
         
         // Call the handler
         final Object result = askHandler.handleAsk(key, value);
