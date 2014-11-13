@@ -69,6 +69,13 @@ public final class Utils {
   private static String _cachedUserName = null;
   
   
+  public static ExecutorService createPrefixedExecutorPool(String prefix) {
+    return Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat(prefix + "-%s").build());
+  }
+  
+
+  
+  
   
   
   /***

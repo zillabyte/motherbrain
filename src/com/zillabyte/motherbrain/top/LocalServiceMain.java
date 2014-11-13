@@ -41,7 +41,7 @@ public class LocalServiceMain {
   static final Logger log = Utils.getLogger(LocalServiceMain.class);
   static FlowInstance _flowInstance = null;
   static final ConcurrentHashMap<String, ReentrantLock> _locks = new ConcurrentHashMap<>();
-  static final LinkedBlockingQueue<Object> _unhandledExceptions = new LinkedBlockingQueue<>();
+ 
 
   public static final long INIT_TIMEOUT = 5000;
   public static final long LOCK_TIMEOUT_SECONDS = 15;
@@ -58,7 +58,6 @@ public class LocalServiceMain {
     nonStartingFlowStates = nonStartingFlowStateArray;
   }
 
-  public static final int MAX_UNHANDLED_EXCEPTION_HISTORY = 50;
   public static final long OPERATION_STARTING_TIMEOUT_MS = TimeUnit.MILLISECONDS.convert(30,  TimeUnit.MINUTES);
   public static final long OPERATION_STARTED_TIMEOUT = TimeUnit.MILLISECONDS.convert(30, TimeUnit.MINUTES);
   public static final long REGISTER_TIMEOUT = OPERATION_STARTED_TIMEOUT;
@@ -83,7 +82,6 @@ public class LocalServiceMain {
    */
   public static void init() throws Exception {
 
-    initUnhandledErrorsWatcher();
     Universe.instance().topService().init();
 
   }
@@ -365,20 +363,6 @@ public class LocalServiceMain {
   }
 
 
-  private static void initUnhandledErrorsWatcher() throws InterruptedException, CoordinationException {
-    Universe.instance().state().watchForMessage(ExceptionHandler.RemoteReporter.STATE_STREAM, new MessageHandler() {
-
-      @Override
-      public void handleNewMessage(String key, Object payload) {
-        _unhandledExceptions.add(payload);
-        while (_unhandledExceptions.size() > MAX_UNHANDLED_EXCEPTION_HISTORY) {
-          _unhandledExceptions.remove();
-        }
-      }
-
-    });
-  }
-
 
   /******************************************************************************/
   /** Main **********************************************************************/
@@ -435,7 +419,6 @@ public class LocalServiceMain {
   public static void clear() {
     _flowInstance = null;
     _locks.clear();
-    _unhandledExceptions.clear();    
   }
 
 }

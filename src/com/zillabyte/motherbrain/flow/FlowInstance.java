@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -56,6 +57,9 @@ public class FlowInstance implements Serializable {
   static final long SUSPEND_TIMEOUT = Config.getOrDefault("flow.instance.suspend.timeout.ms", 1000L * 60 * 5);
   static final DateFormat dateFormat = DateFormat.getDateInstance();
   static final Logger _log = Utils.getLogger(FlowInstance.class);
+  
+  static final ExecutorService _executor = Utils.createPrefixedExecutorPool("flow-instance");
+  
 
   private final App _flow;
   private final OperationLogger _logger;
@@ -722,7 +726,7 @@ public class FlowInstance implements Serializable {
         _emitPermissionWatcher.unsubscribe();
       }
 
-      _emitPermissionWatcher = Universe.instance().state().watchForAsk(flowStateKey() + "/emit_permission", new AskHandler() {
+      _emitPermissionWatcher = Universe.instance().state().watchForAsk(_executor, flowStateKey() + "/emit_permission", new AskHandler() {
         @Override
         public Object handleAsk(String key, Object payload) {
           synchronized(_stateMonitor) {
@@ -742,7 +746,7 @@ public class FlowInstance implements Serializable {
         _messageWatcher.unsubscribe();
       }
 
-      _messageWatcher = Universe.instance().state().watchForMessage(flowStateKey(), new MessageHandler() {
+      _messageWatcher = Universe.instance().state().watchForMessage(_executor, flowStateKey(), new MessageHandler() {
         @SuppressWarnings("unchecked")
         @Override
         public void handleNewMessage(final String key, final Object rawPayload) throws StateMachineException, FlowException, OperationException, CoordinationException, InterruptedException {

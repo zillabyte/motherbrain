@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -199,7 +200,7 @@ public class MockStateService implements CoordinationService, AskWrapper.Askable
   }
 
   @Override
-  public Watcher watchForMessage(String stream, MessageHandler messageHandler) {
+  public Watcher watchForMessage(ExecutorService exec, String stream, MessageHandler messageHandler) {
     synchronized(_messageWatchers) {
       Pair<String, MessageHandler> p = new Pair<String, MessageHandler>(stream, messageHandler);
       _messageWatchers.add(p);
@@ -244,18 +245,18 @@ public class MockStateService implements CoordinationService, AskWrapper.Askable
   }
 
   @Override
-  public void sendTransactionalMessage(String channel, Object message, long timeout) throws CoordinationException, TimeoutException {
-    _askWrapper.sendTransactionalMessage(channel, message, timeout);
+  public void sendTransactionalMessage(ExecutorService exec, String channel, Object message, long timeout) throws CoordinationException, TimeoutException {
+    _askWrapper.sendTransactionalMessage(exec, channel, message, timeout);
   }
 
   @Override
-  public Watcher watchForAsk(String channel, AskHandler askHandler) throws CoordinationException {
-    return _askWrapper.watchForAsk(channel, askHandler);
+  public Watcher watchForAsk(ExecutorService exec, String channel, AskHandler askHandler) throws CoordinationException {
+    return _askWrapper.watchForAsk(exec, channel, askHandler);
   }
 
   @Override
-  public Object ask(String channel, Object message, long timeout) throws CoordinationException, TimeoutException {
-    return _askWrapper.ask(channel, message, timeout);
+  public Object ask(ExecutorService exec, String channel, Object message, long timeout) throws CoordinationException, TimeoutException {
+    return _askWrapper.ask(exec, channel, message, timeout);
   }
 
   @Override
