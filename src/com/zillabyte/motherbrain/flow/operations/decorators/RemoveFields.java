@@ -2,11 +2,11 @@ package com.zillabyte.motherbrain.flow.operations.decorators;
 
 import java.util.Collection;
 
+import net.sf.json.JSONObject;
+
 import com.zillabyte.motherbrain.flow.Fields;
 import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.operations.Operation;
-
-import net.sf.json.JSONObject;
 
 public class RemoveFields implements EmitDecorator {
 

@@ -99,7 +99,7 @@ public class ComponentOutput extends Function {
         carryFieldSeen = true;
       }
 
-      if(!carryFieldSeen) throw new OperationException(this, "Attempted to merge fields in ComponentOutput, but no input tuple given!");
+      if(!carryFieldSeen) throw (OperationException) new OperationException(this).setAllMessages("Attempted to merge fields in \"" + instanceName() + "\", but no input tuple given!");
       outputTuple.remove(getParentComponentCarryFieldName());
       
     }
