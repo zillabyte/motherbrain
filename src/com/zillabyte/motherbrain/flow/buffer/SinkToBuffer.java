@@ -16,6 +16,7 @@ import com.zillabyte.motherbrain.flow.buffer.mock.LocalBufferProducer;
 import com.zillabyte.motherbrain.flow.config.FlowConfig;
 import com.zillabyte.motherbrain.flow.operations.Operation;
 import com.zillabyte.motherbrain.flow.operations.OperationException;
+import com.zillabyte.motherbrain.flow.operations.OperationLogger;
 import com.zillabyte.motherbrain.flow.operations.Sink;
 import com.zillabyte.motherbrain.relational.ColumnDef;
 import com.zillabyte.motherbrain.relational.RelationDef;
@@ -125,7 +126,8 @@ public class SinkToBuffer extends Sink {
         if(expectField) break;
       }
       if(!expectField) {
-        MeteredLog.info(_operationLogger, "Unexpected field '"+field+"' in tuple '"+t.toString()+"'. Data will not be sunk.");
+        _operationLogger.writeLog("Unexpected field '"+field+"' in tuple '"+t.toString()+"'. Data will not be sunk.", OperationLogger.LogPriority.ERROR);
+        return;
       }
     }
     

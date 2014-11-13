@@ -94,7 +94,7 @@ public class LocalFlowController {
     List<Integer> ret = Lists.newLinkedList();
     if (slots.size() == 1) {
       LocalOperationSlot slot = slots.get(0);
-      slot.enqueuTuple(sourceTask, streamName, tuple);
+      slot.enqueueTuple(sourceTask, streamName, tuple);
       ret.add(slot.task());
     } else {
       Utils.TODO("implement round-robin and hash-based routing");
@@ -164,7 +164,7 @@ public class LocalFlowController {
       LocalOperationSlot slot = getSlotByTask(destTask);
       if (slot == null)
         throw new NullPointerException("could not find slot " + destTask);
-      slot.enqueuTuple(sourceTask, stream, tuple);
+      slot.enqueueTuple(sourceTask, stream, tuple);
     } else {
       // maybe we're just shutting down... 
       _log.warn("tuple emitted while slot is not running: " + tuple);

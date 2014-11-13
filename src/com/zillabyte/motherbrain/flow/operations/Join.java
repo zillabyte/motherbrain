@@ -116,9 +116,9 @@ public class Join extends AggregationOperation {
         break;
       case OUTER:
         // See below
-        throw new OperationException(this, new NotImplementedException());
+        throw (OperationException) new OperationException(this, new NotImplementedException()).setAllMessages("Outer join is not yet implemented.");
       default:
-        throw new OperationException(this, "unknown join type");
+        throw (OperationException) new OperationException(this).setAllMessages("Unknown join type: "+this._joinType);
       }
   
       while(iter.hasNext()) {

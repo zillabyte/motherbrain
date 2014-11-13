@@ -9,7 +9,7 @@ public interface MultiLangErrorHandler {
   
   public Exception getNextError();
  
-  public void mabyeThrowNextError() throws OperationException;
+  public void maybeThrowNextError() throws OperationException;
   
   
 }

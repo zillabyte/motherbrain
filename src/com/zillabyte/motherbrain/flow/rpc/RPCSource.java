@@ -46,7 +46,7 @@ public final class RPCSource extends Source {
    * 
    */
   @Override
-  public void prepare() {
+  public void prepare() throws OperationException {
     _inputQueue = Universe.instance().rpcQueueFactory().getInputQueue(this);
     _inputQueue.init();
   }

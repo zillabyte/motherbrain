@@ -45,7 +45,7 @@ public final class MultiLangRunEach extends Function implements MultiLangOperati
       _handler.addAliases(t);
       _handler.generalObserver().sendTupleMessage(t);
       _handler.tupleObserver().collectTuplesUntilDone(collector);
-      _handler.generalObserver().mabyeThrowNextError();  
+      _handler.generalObserver().maybeThrowNextError();  
     
     } catch (MultiLangProcessException e) {
       throw new OperationException(this,e);

@@ -54,6 +54,10 @@ public abstract class MotherbrainException extends Exception {
 
   public MotherbrainException(Throwable e) {
     this(null, null, e);
+    if(e instanceof MotherbrainException) {
+      _internalMessage = ((MotherbrainException)e).getInternalMessage();
+      _userMessage = ((MotherbrainException)e).getUserMessage();
+    }
   }
   
   ////////////////////////////////////////////////////////////////////
@@ -101,7 +105,7 @@ public abstract class MotherbrainException extends Exception {
   }
   
   public MotherbrainException adviseRetry() {
-    this._userMessage += " Please try re-pushing, if the problem persists, please contact support@zillabyte.com. We apologize for the inconvenience.";
+    this._userMessage += " If there are no other errors, please try re-pushing. If the problem persists, please contact support@zillabyte.com. We apologize for the inconvenience.";
     return this;
   }
   

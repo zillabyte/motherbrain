@@ -113,7 +113,7 @@ public final class LocalComponent extends Function {
       }
     
     } catch (APIException e) {
-      throw new OperationException(this,e);
+      throw (OperationException) new OperationException(this,e).setAllMessages("Error processing tuple: "+t.toString()+" (via remote RPC for component \""+_componentName+"\").");
     }
   }
 

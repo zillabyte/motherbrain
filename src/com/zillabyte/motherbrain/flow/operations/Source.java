@@ -121,8 +121,8 @@ public abstract class Source extends Operation {
       });
     } catch (ExecutionException e) {
       
-      // Some other error... propage. 
-      throw new OperationException(Source.this, e);
+      // Some other error... propagate. 
+      throw (OperationException) new OperationException(Source.this, e).setUserMessage("An error occurred in the source while it was asking for permission to start emitting.").adviseRetry();
       
     } catch (RetryException e) {
 
@@ -132,7 +132,7 @@ public abstract class Source extends Operation {
        * don't want operations waiting around, thinking they're forever stuck in STARTED. 
        * Instead, just die and let a new operation take its place. 
        */
-      throw new OperationException(Source.this, "can not get a response from master!");
+      throw (OperationException) new OperationException(Source.this).setAllMessages("Source operation failed to get a response from master while asking for emit permission.").adviseRetry();
     }
 
   }
