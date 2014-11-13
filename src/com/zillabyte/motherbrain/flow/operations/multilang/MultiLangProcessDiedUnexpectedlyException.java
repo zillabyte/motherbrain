@@ -14,7 +14,7 @@ public class MultiLangProcessDiedUnexpectedlyException extends MultiLangProcessE
   public MultiLangProcessDiedUnexpectedlyException(MultiLangProcess proc) {
     super(proc);
     setInternalMessage("Process " + proc.getProcessBuilder().command().toString() + " died!");
-    setUserMessage("Process died unexpectedly");
+    setUserMessage("Process died unexpectedly.");
   }
 
 

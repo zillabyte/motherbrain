@@ -136,7 +136,7 @@ public class LocalOperationSlot {
     }
   }
   
-  public void enqueuTuple(Integer sourceTask, String stream, Object tuple) {
+  public void enqueueTuple(Integer sourceTask, String stream, Object tuple) {
     debug("queueing local tuple: " + tuple);
     _queue.add(new Triplet<>(sourceTask, stream, tuple));
   }

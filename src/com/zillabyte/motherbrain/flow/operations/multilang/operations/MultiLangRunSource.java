@@ -93,9 +93,15 @@ public class MultiLangRunSource extends Source implements MultiLangOperation {
       // Sanity
       _handler.ensureAlive();
       if (_handler.tupleObserver().queue().size() != 0) {
-        throw (OperationException) new OperationException(this).setInternalMessage("attempt to get nextTuple when queue is not empty: " + _handler.tupleObserver().queue());
+        if(_handler.tupleObserver().queue().peek() == MultiLangProcessTupleObserver.DONE_MARKER) {
+          // If we have a done marker at the top, just remove it.
+          _handler.takeNextTuple();
+        } else {
+          // Otherwise something is weird...
+          throw (OperationException) new OperationException(this).setInternalMessage("attempt to get nextTuple when queue is not empty: " + _handler.tupleObserver().queue());
+        }
       }
-      
+
       // Issue the command
       Benchmark.markBegin("multilang.source.next_tuple.command_next");
       _handler.writeMessage("{\"command\": \"next\"}");
@@ -151,10 +157,11 @@ public class MultiLangRunSource extends Source implements MultiLangOperation {
           continue;
           
         } else if (output instanceof Throwable) {
-          throw new OperationException(this, (Throwable) output);
+          System.err.println("GOT A THROWABLE");
+          throw (OperationException) new OperationException(this, (Throwable) output).setUserMessage("The multilang process returned an error");
           
         } else { 
-          throw new OperationException(this, "unknown type");
+          throw (OperationException) new OperationException(this).setAllMessages("The multilang process returned uninterpretable data of type: "+output.getClass().getName()+".");
           
         }
       } while(output != MultiLangProcessTupleObserver.DONE_MARKER);

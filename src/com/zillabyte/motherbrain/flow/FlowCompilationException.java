@@ -6,7 +6,6 @@ public class FlowCompilationException extends MotherbrainException {
 
   public FlowCompilationException(String string) {
     super(string);
-    this.setUserMessage(string);
   }
   
   public FlowCompilationException() {

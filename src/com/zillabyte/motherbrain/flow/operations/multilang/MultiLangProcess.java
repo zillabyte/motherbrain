@@ -133,7 +133,7 @@ public class MultiLangProcess {
       }
       
     } catch(IOException e) {
-      throw new MultiLangProcessException(this, e);
+      throw (MultiLangProcessException) new MultiLangProcessException(this, e).setAllMessages("An error occurred while starting up the multilang process.").adviseRetry();
     } finally {
       _benchmark.end("multilang.process.start");
     }
@@ -148,7 +148,7 @@ public class MultiLangProcess {
    * @throws IOException 
    * @throws MultiLangException 
    */
-  private void handleStartProcess(final ProcessBuilder pb) throws IOException {
+  private void handleStartProcess(final ProcessBuilder pb) throws IOException, MultiLangProcessException {
     
     // Init 
     _log.info("starting the process: " + pb.command() + " in " + pb.directory());
@@ -159,7 +159,7 @@ public class MultiLangProcess {
       Future<Socket> socketFuture = null;
       if (this._serverSocket != null) {
         socketFuture = Utils.run(new Callable<Socket>() {
-          public Socket call() throws Exception {
+          public Socket call() throws MultiLangProcessException {
             _benchmark.begin("multilang.process.socket.init");
             try {
               _serverSocket.setPerformancePreferences(0, 2, 1);
@@ -168,7 +168,7 @@ public class MultiLangProcess {
               return socket;
             } catch(Exception e) {
               _log.error("error in socket connection: \n" + ExceptionUtils.getFullStackTrace(e));
-              throw new Exception(e);
+              throw (MultiLangProcessException) new MultiLangProcessException(MultiLangProcess.this, e).setUserMessage("An error occurred during socket initialization.").adviseRetry();
             } finally {
               _benchmark.end("multilang.process.socket.init");
             }
@@ -180,7 +180,7 @@ public class MultiLangProcess {
           // Note: we purposely don't use .wait here because we don't want the above
           // chunk of code to context switch. 
           Utils.sleep(10);
-        };
+        }
       }
       
       // Run
@@ -238,7 +238,7 @@ public class MultiLangProcess {
             extraInfo = " The process is NOT done;";
           }
           cleanup();
-          throw new RuntimeException("Could not connect with multilang socket: " + _serverSocket.getLocalPort() + ". " + extraInfo, e);
+          throw (MultiLangProcessException) new MultiLangProcessException(this, e).setAllMessages("Could not connect with multilang socket: " + _serverSocket.getLocalPort() + ". " + extraInfo + ".").adviseRetry();
         } catch (ExecutionException e) {
           cleanup();
           throw new IOException(e);
@@ -264,7 +264,7 @@ public class MultiLangProcess {
       try {
         this._processWrapper.get();
       } catch (ExecutionException | InterruptedException e) {
-        throw new MultiLangProcessException(this, e);
+        throw (MultiLangProcessException) new MultiLangProcessException(this, e).setUserMessage("The multilang process died!");
       }
       
       // Otherwise, no errors.. just throw the dead exception...
@@ -521,7 +521,7 @@ public class MultiLangProcess {
         try {
           _processWrapper.get();
         } catch (ExecutionException e) {
-          throw new MultiLangProcessException(this, e);
+          throw (MultiLangProcessException) new MultiLangProcessException(this, e).setAllMessages("An error occurred reading from the multilang process.").adviseRetry();
         }
         return null;
       }
@@ -529,7 +529,7 @@ public class MultiLangProcess {
       // DONE 
       return m;
     } catch(InterruptedException e) {
-      throw new MultiLangProcessException(this, e);
+      throw (MultiLangProcessException) new MultiLangProcessException(this, e).setAllMessages("An error occurred reading from the multilang process.").adviseRetry();
     }
   }
   
@@ -655,7 +655,7 @@ public class MultiLangProcess {
         p = Runtime.getRuntime().exec(killCommand);
         p.waitFor();
       } catch (IOException | InterruptedException e) {
-        throw new MultiLangProcessException(this, "Failed to start kill command", e);
+        throw (MultiLangProcessException) new MultiLangProcessException(this, e).setAllMessages("Failed to kill the multilang process. In most cases this probably shouldn't matter.");
       }
       
       _log.info("Process " + _pid + " killed with exit status: " + p.exitValue());
@@ -687,10 +687,10 @@ public class MultiLangProcess {
       try {
         Utils.shell("kill -SIGSTOP " + _pid);
       } catch (IOException | InterruptedException e) {
-        throw new MultiLangProcessException(this, e);
+        throw (MultiLangProcessException) new MultiLangProcessException(this, e).setAllMessages("An error occurred while pausing the multilang process.").adviseRetry();
       }
     } else {
-      throw new MultiLangProcessException(this, "Attempted to pause a process (PID=" + _pid + ") that was not running!");
+      throw (MultiLangProcessException) new MultiLangProcessException(this).setAllMessages("Attempted to pause a multilang process (PID=" + _pid + ") that was not running!");
     }
   }
 
@@ -706,10 +706,10 @@ public class MultiLangProcess {
       try {
         Utils.shell("kill -SIGCONT " + _pid);
       } catch (IOException | InterruptedException e) {
-        throw new MultiLangProcessException(this, e);
+        throw (MultiLangProcessException) new MultiLangProcessException(this, e).setAllMessages("An error occurred while resuming a multilang process.");
       }
     } else {
-      throw new MultiLangProcessException(this, "Attempted to resume a process (PID=" + _pid + ") that was not paused!");
+      throw (MultiLangProcessException) new MultiLangProcessException(this).setAllMessages("Attempted to resume a multilang process (PID=" + _pid + ") that was not paused!");
     }
   }
   
@@ -752,7 +752,7 @@ public class MultiLangProcess {
     try {
       f.get(timeout, unit);
     } catch (ExecutionException e) {
-      throw new MultiLangProcessException(this, e);
+      throw (MultiLangProcessException) new MultiLangProcessException(this, e).setAllMessages("An error occurred while waiting for a multilang process to exit.");
     }
   }
   

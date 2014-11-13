@@ -68,7 +68,7 @@ public class MultilangHandler implements Serializable {
       // Init
       _log.info("starting live run " + _operation.instanceName());
       if (_process != null)
-        throw new MultiLangException(_operation, "the process has already been initialized");
+        throw (MultiLangException) new MultiLangException(_operation, "the process has already been initialized").setUserMessage("An error occurred while preparing the operation.").adviseRetry();
 
       // Pull down the containers...
       Universe.instance().containerFactory().createSerializer().deserializeOperationInstance(_container, _operation.instanceName());
@@ -107,10 +107,10 @@ public class MultilangHandler implements Serializable {
 
       // Send the prepare message...
       _processTupleObserver.startWatching();
-      _processGeneralObserver.mabyeThrowNextError();
+      _processGeneralObserver.maybeThrowNextError();
       _process.writeMessageWithEnd("{\"command\": \"prepare\"}");
       _processTupleObserver.waitForDoneMessageWithoutCollecting();
-      _processGeneralObserver.mabyeThrowNextError();
+      _processGeneralObserver.maybeThrowNextError();
 
       // Clean up later...
       MultiLangCleaner.registerOperation(_process, _operation);
@@ -118,7 +118,7 @@ public class MultilangHandler implements Serializable {
 
     } catch (MotherbrainException | InterruptedException | TimeoutException ex) {
       _operation.logger().writeLog("Internal error while preparing operation", OperationLogger.LogPriority.ERROR);
-      throw new MultiLangException(_operation, ex);
+      throw (MultiLangException) new MultiLangException(_operation, ex).setUserMessage("An error occurred while preparing the operation.").adviseRetry();
     }
   }
 
@@ -135,7 +135,7 @@ public class MultilangHandler implements Serializable {
         _container.cleanup();
       }
     } catch (MultiLangProcessException | ContainerException e) {
-      throw new MultiLangException(_operation, e);
+      throw (MultiLangException) new MultiLangException(_operation, e).setUserMessage("An error occurred while cleaning up the operation. In most cases you do not need to worry about this.");
     }
   }
 
@@ -163,7 +163,7 @@ public class MultilangHandler implements Serializable {
     try {
       _process.writeMessageWithEnd(string);
     } catch (InterruptedException | MultiLangProcessException e) {
-      throw new MultiLangException(_operation, e);
+      throw (MultiLangException) new MultiLangException(_operation, e).setUserMessage("An error occurred while communicating with the multilang process.").adviseRetry();
     }
   }
 
@@ -180,7 +180,7 @@ public class MultilangHandler implements Serializable {
   }
 
   public void maybeThrowNextError() throws OperationException {
-    this._processGeneralObserver.mabyeThrowNextError();
+    this._processGeneralObserver.maybeThrowNextError();
   }
 
   public Object takeNextTuple() throws OperationException, InterruptedException {
@@ -216,7 +216,7 @@ public class MultilangHandler implements Serializable {
 
   public void ensureAlive() throws OperationDeadException {
     if (this.isAlive() == false) {
-      throw new OperationDeadException(this._operation, "The operation is dead");
+      throw (OperationDeadException) new OperationDeadException(this._operation, "The operation is dead.").setUserMessage("The operation died. If this was unexpected, please try re-pushing. We apologize for the inconvenience.");
     }
   }
 

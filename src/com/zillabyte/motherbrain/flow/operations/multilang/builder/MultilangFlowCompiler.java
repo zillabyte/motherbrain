@@ -103,7 +103,7 @@ public class MultilangFlowCompiler {
     // Step 2: run "zillabyte info" and parse the settings 
     JSONObject zbInfo = handleGettingSettings(flowId);
     if (zbInfo == null) {
-      throw new FlowCompilationException("unable to retrieve 'zillabyte info' response");
+      throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Unable to retrieve 'zillabyte info' response.").adviseRetry();
     }
     
     // Step 3: Build a flow from the settings... 
@@ -181,15 +181,15 @@ public class MultilangFlowCompiler {
       
       // Sanity 
       if (originName == null || operationMap.containsKey(originName) == false) 
-        throw new FlowCompilationException("Could not find operation with name: '" + originName + "'");
+        throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Could not find operation with name: '" + originName + "'");
       if (destName == null || operationMap.containsKey(destName) == false) 
-        throw new FlowCompilationException("Could not find operation with name: '" + destName + "'");
+        throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Could not find operation with name: '" + destName + "'");
       if (arcName == null)
-        throw new FlowCompilationException("Connection did not have a name: '" + arc + "'");
+        throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Connection did not have a name: '" + arc + "'");
       if (loopBack) {
         Object loopBackNode = operationMap.get(destName);
         if(loopBackNode instanceof Operation) {
-          if( ((Operation) loopBackNode).type().equalsIgnoreCase("source") ) throw new FlowCompilationException("Cannot loop back to a source");
+          if( ((Operation) loopBackNode).type().equalsIgnoreCase("source") ) throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Cannot loop back to a source");
         }
       }
       
@@ -266,7 +266,7 @@ public class MultilangFlowCompiler {
     // Multilang version...  
     String multilangVersion = zbInfo.optString("multilang_version", "0.0.0");
     if (VersionComparer.isAtLeast(multilangVersion, MINIMUM_REQUIRED_VERSION) == false) {
-      throw new FlowCompilationException("The flow is built with an older version of Zillabyte (" + multilangVersion + ") . Please upgrade dependencies.");
+      throw (FlowCompilationException) new FlowCompilationException().setAllMessages("The flow is built with an older version of Zillabyte (" + multilangVersion + ") . Please upgrade dependencies.");
     }
     
   }
@@ -284,7 +284,7 @@ public class MultilangFlowCompiler {
     _log.info("There are " + actualNodes + " nodes expected for this flow. (" + flow.getId() + ")");
     
     if (actualNodes == 0) {
-      throw new FlowCompilationException("the flow has no nodes");
+      throw (FlowCompilationException) new FlowCompilationException().setAllMessages("The flow has no nodes");
     }
     
     // Each operation must have parallelism of at least 1.
@@ -346,7 +346,7 @@ public class MultilangFlowCompiler {
       
     } else {
       
-      throw new FlowCompilationException("unknown graph case");
+      throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Unknown graph case. The origin is a "+origin.getClass().getName()+" while the destination is a "+dest.getClass().getName()+".");
       
     }
   }
@@ -420,11 +420,11 @@ public class MultilangFlowCompiler {
             return JSONUtil.parseObj(message);
             
           } catch (TimeoutException ex) {
-            throw (FlowCompilationException)new FlowCompilationException(ex).setUserMessage("App did not offer settings in time.");
+            throw (FlowCompilationException)new FlowCompilationException(ex).setAllMessages("Timeout retrieving flow meta information.").adviseRetry();
           } catch (ContainerException e) {
-            throw (FlowCompilationException)new FlowCompilationException(e).setUserMessage("Error getting app container");
+            throw (FlowCompilationException)new FlowCompilationException(e).setAllMessages("Error initializing flow container.").adviseRetry();
           } catch (InterruptedException e) {
-            throw (FlowCompilationException)new FlowCompilationException(e).setUserMessage("Interrupted");
+            throw (FlowCompilationException)new FlowCompilationException(e).setAllMessages("Flow compilation interrupted.").adviseRetry();
           } catch (MultiLangProcessException e) {
             throw new FlowCompilationException(e);
           }
@@ -577,7 +577,7 @@ public class MultilangFlowCompiler {
           _log.info("recursively building flow: " + compName + " with config: " + config);
           Flow subFlow = _fetcher.buildFlow(compName, config);
           if (subFlow instanceof App) 
-            throw new FlowCompilationException("only components may be nested");
+            throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Only components may be nested.");
           
           return subFlow;
         }
@@ -609,7 +609,7 @@ public class MultilangFlowCompiler {
 
         
       default: 
-        throw new FlowCompilationException("Unknown operation type: " + nodeType);
+        throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Unknown operation type: " + nodeType+".");
       
       }
 

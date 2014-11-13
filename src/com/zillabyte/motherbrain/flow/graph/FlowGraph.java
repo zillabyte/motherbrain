@@ -87,9 +87,9 @@ public final class FlowGraph implements Serializable {
    * @return 
    */
   public Connection connect(Operation source, Operation dest, String name, Boolean loopBack, Integer maxIter) throws FlowCompilationException {   
-    if (contains(source, dest)) throw new RuntimeException("connection already exists: " + source.operationId() + " -> " + dest.operationId());
+    if (contains(source, dest)) throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Connection already exists: " + source.operationId() + " -> " + dest.operationId());
     
-    if (source.namespaceName().equals(dest.namespaceName()) && !loopBack) throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Cannot connect operation to itself: " + source + " -> " + dest + ".");
+    if (source.namespaceName().equals(dest.namespaceName()) && !loopBack) throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Cannot connect operation to itself unless it is a loopback: " + source + " -> " + dest + ".");
     
     Connection c = new Connection(this, source, dest, name, loopBack, maxIter);
     

@@ -94,7 +94,7 @@ public abstract class AggregationOperation extends Operation implements Processa
     List<Object> list = Lists.newArrayListWithExpectedSize(fields.size());
     for(final String s : fields) {
       if (tuple.containsValueKey(s) == false) {
-        throw new AggregationException("The tuple " + tuple.toString() + " does not contain the grouping field: " + s);
+        throw (AggregationException) new AggregationException().setAllMessages("The tuple " + tuple.toString() + " does not contain the grouping field: " + s);
       }
       list.add(tuple.get(s));
     }
@@ -133,7 +133,7 @@ public abstract class AggregationOperation extends Operation implements Processa
     // Init
     MapTuple t = new MapTuple();
     if (fields.size() != key.groupValueSize()) {
-      throw new OperationException(this, "the key size did not match the fields size!");
+      throw (OperationException) new OperationException(this).setAllMessages("The aggregation key size did not match the fields size!");
     }
     for(int i=0;i<key.groupValueSize();i++) {
       t.put(fields.get(i), key.getGroupValue(i));
