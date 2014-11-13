@@ -353,7 +353,7 @@ public class MultilangFlowCompiler {
 
   
   
-  private void maybeInjectComponent(FlowGraph flowGraph, Component c) throws FlowCompilationException {
+  private void maybeInjectComponent(FlowGraph flowGraph, Component c) {
     
     // Only inject if it hasn't already been done above (this handles the source-from-component case)
     if (flowGraph.containsAny(c.graph().allOperations()) == false) {

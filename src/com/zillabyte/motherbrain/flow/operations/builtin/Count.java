@@ -1,13 +1,13 @@
 package com.zillabyte.motherbrain.flow.operations.builtin;
 
-import net.sf.json.JSONObject;
-
 import com.zillabyte.motherbrain.flow.Fields;
 import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.aggregation.Aggregator;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.operations.GroupBy;
 import com.zillabyte.motherbrain.top.MotherbrainException;
+
+import net.sf.json.JSONObject;
 
 public class Count extends GroupBy implements Aggregator  {
 

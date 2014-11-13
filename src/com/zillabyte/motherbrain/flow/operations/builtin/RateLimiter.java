@@ -1,11 +1,11 @@
 package com.zillabyte.motherbrain.flow.operations.builtin;
 
-import net.sf.json.JSONObject;
-
 import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.operations.Function;
 import com.zillabyte.motherbrain.flow.operations.OperationException;
+
+import net.sf.json.JSONObject;
 
 public class RateLimiter extends Function {
 

@@ -51,7 +51,7 @@ public class SinkToBuffer extends Sink {
      
     String relationName = node.containsKey("relation") ?  node.getString("relation") : node.getString("name");
     if (relationName == null) {
-      throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Could not get relation name from flow meta data: "+node);
+      throw new FlowCompilationException("Could not get relation name");
     }
     _relation = new RelationDef(relationName);
     _topicName = null;  // We don't know it yet
@@ -150,11 +150,11 @@ public class SinkToBuffer extends Sink {
       if(apiResult.containsKey("buffer_settings")){
         bufferSettings = apiResult.getJSONObject("buffer_settings");
       }else{
-        throw (OperationException) new OperationException(this, "Did not get bufferSettings json from API: " + apiResult.toString()).setUserMessage("Could not retrieve relation meta data from API. Please delete relations associated with this app, then try re-pushing. If problem persists, please contact support@zillabyte.com.");
+        throw new RuntimeException("Did not get bufferSettings json from API: " + apiResult.toString());
       }
 
     } catch (APIException e) {
-      throw (OperationException)new OperationException(this, e).setAllMessages("Could not get relation '" + _relation.name() + "' from API!");
+      throw (OperationException)new OperationException(this, e).setInternalMessage("Could not get relation '" + _relation.name() + "' from API!");
     }
     _log.info("Got bufferSettings from API: " + bufferSettings.toString());
     JSONObject sourceSettings = bufferSettings.getJSONObject("source");
@@ -178,7 +178,7 @@ public class SinkToBuffer extends Sink {
     while(!bufferService.hasTopic(_topicName)){
       waitRetry += 1;
       if(waitRetry > 30){
-        throw (OperationException) new OperationException(this, "Kafka topic wasn't created in 30 seconds. It's likely that metamorphosis screwed up.").setUserMessage("Something is wrong with our internal data-writing system. Please report this error to support@zillabyte.com. Thanks and sorry for the inconvenience!");
+        throw new RuntimeException("Kafka topic wasn't created in 30 seconds. It's likely that metamorphosis screwed up.");
       }
       _log.info("Waiting for the topic " + _topicName + " to be created. Attempt #" + waitRetry);
       Utils.sleep(1000); // This is before we deploy the topology to storm. 
@@ -186,7 +186,7 @@ public class SinkToBuffer extends Sink {
     
   }
 
-  private void initProducer() throws OperationException {
+  private void initProducer() {
     _producer = Universe.instance().bufferClientFactory().createProducer(this);
   }
   

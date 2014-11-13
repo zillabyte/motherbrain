@@ -65,7 +65,7 @@ public final class FlowAggregationSplitter {
         
       } else if (thisOp instanceof AggregationOperation) {
         
-        throw (OperationException) new OperationException(thisOp, "unknown agg type").setUserMessage("Unknown aggregation type "+thisOp.type());
+        throw new OperationException(thisOp, "unknown agg type");
         
       } else if (thisOp instanceof Source) {
         

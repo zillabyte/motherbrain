@@ -228,7 +228,7 @@ public class DiskBackedStore implements AggregationStore {
     try {
       FileUtils.deleteDirectory(new File(dataPath(batch)));
     } catch (IOException e) {
-      throw (AggregationException) new AggregationException(e).setUserMessage("Unable to cleanup aggregation data.").adviseRetry();
+      throw new AggregationException(e);
     }
   }
 
