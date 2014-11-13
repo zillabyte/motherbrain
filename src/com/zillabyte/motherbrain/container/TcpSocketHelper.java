@@ -10,8 +10,8 @@ import org.apache.log4j.Logger;
 
 import com.github.rholder.retry.RetryException;
 import com.zillabyte.motherbrain.utils.FileLockUtil;
-import com.zillabyte.motherbrain.utils.FileLockUtil.MultiLock;
 import com.zillabyte.motherbrain.utils.Utils;
+import com.zillabyte.motherbrain.utils.FileLockUtil.MultiLock;
 
 /**
  * Facilitates communication between the container and the host
@@ -31,7 +31,7 @@ public class TcpSocketHelper {
    * Allow the system to allocate a random lock for container to host communication.
    * @return
    */
-  public static ServerSocket getNextAvailableTcpSocket() throws ContainerException {
+  public static ServerSocket getNextAvailableTcpSocket() {
     MultiLock lock = null;
     try {
       lock = FileLockUtil.lock("/tmp/port_helper_lock");
@@ -44,7 +44,7 @@ public class TcpSocketHelper {
         }
       });
     } catch (IOException | InterruptedException | ExecutionException | RetryException e) { 
-      throw (ContainerException) new ContainerException(e).setUserMessage("Failed to initialize TCP socket.").adviseRetry();
+      throw new RuntimeException(e);
     } finally {
       try {
         if (lock != null) {

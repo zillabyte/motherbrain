@@ -121,7 +121,7 @@ public class InplaceContainer implements Container, Serializable {
       return process;
 
     } catch(Exception ex) {
-      throw (ContainerException) new ContainerException(ex).setUserMessage("Failed to execute \"" + command.toString() + "\".").adviseRetry();
+      throw new ContainerException(ex);
     }
   }
 
@@ -207,7 +207,7 @@ public class InplaceContainer implements Container, Serializable {
       File f = new File(_flowRoot, file);
       return FileUtils.readFileToByteArray(f);
     } catch (IOException e) {
-      throw (ContainerException) new ContainerException(e).setUserMessage("Failed to read \""+file+"\".").adviseRetry();
+      throw new ContainerException(e);
     }
   }
 

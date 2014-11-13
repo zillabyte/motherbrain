@@ -994,7 +994,7 @@ public final class CoordinatedOutputCollector implements OutputCollector {
     try {
       this.emitImpl(_delegate.getDefaultStream(), t);
     } catch (DefaultStreamException e) {
-      throw (OperationException) new OperationException(_operation, e).setUserMessage("No emit stream given for operation \""+_operation.namespaceName()+"\".");
+      throw new OperationException(_operation, e);
     }
   }
   

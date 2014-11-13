@@ -2,10 +2,10 @@ package com.zillabyte.motherbrain.api;
 
 import java.util.Collection;
 
+import com.zillabyte.motherbrain.flow.MapTuple;
+
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
-
-import com.zillabyte.motherbrain.flow.MapTuple;
 
 
 public interface APIService {

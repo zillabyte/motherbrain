@@ -108,7 +108,7 @@ public abstract class OperationLogger implements Serializable {
     @Override
     public void writeLog(String message, LogPriority priority) 
     {
-      log.log(OperationLogger.Base.class.getName(), Priority.INFO, "[f" + _flowId + "][" + _procId.toString() + "][" + priority + "] " + message, null);
+      log.log(OperationLogger.Base.class.getName(), Priority.INFO, "[f" + _flowId + "][" + _procId.toString() + "] " + message, null);
       try {
         writeLogInternal(message, priority);
       } catch (OperationLoggerException | InterruptedException e) {

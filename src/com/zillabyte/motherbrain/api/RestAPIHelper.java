@@ -56,13 +56,13 @@ public class RestAPIHelper {
         log.info("Server responded with 500. Retrying in a few seconds...(" + retries + ")");
         Utils.sleep(RETRY_SLEEP_MS);
       } else {
-         throw (APIException) new APIException("Failed : HTTP error code : " + response.getStatus() + " " + response.getEntity(String.class)).adviseRetry();
+         throw new APIException("Failed : HTTP error code : " + response.getStatus() + " " + response.getEntity(String.class));
       }
     } while(retries < MAX_RETRIES);
  
     final String output = response.getEntity(String.class);
     if (retries == MAX_RETRIES) {
-      throw (APIException) new APIException("Failed: max retries exceeded: response from API: " + output).adviseRetry();
+      throw new APIException("Failed: max retries exceeded: response from API: " + output);
     }
 
     log.debug("get returned: " + output);
@@ -70,7 +70,7 @@ public class RestAPIHelper {
     JSONObject ret = JSONUtil.parseObj(output);
 
     if (ret == null) {
-      throw (APIException) new APIException("Failed: returned response body was null for output: "+output).adviseRetry();
+      throw new JSONException(output);
     }
 
     log.info("done: " + url);
@@ -117,19 +117,19 @@ public class RestAPIHelper {
           Utils.sleep(RETRY_SLEEP_MS);
         }
       } else {
-        throw (APIException) new APIException("Failed : HTTP error code : " + response.getStatus()).adviseRetry();
+        throw new APIException("Failed : HTTP error code : " + response.getStatus()).setUserMessage("Internal API failure, please try again later.");
       }
     } while (retries < MAX_RETRIES);
 
     if (retries == MAX_RETRIES) {
-      throw (APIException) new APIException("Failed: max retries exceeded").adviseRetry();
+      throw new APIException("Failed: max retries exceeded");
     }
 
     String output = response.getEntity(String.class);
     log.info("post returned: " + output);
     JSONObject ret = JSONUtil.parseObj(output);
     if (ret == null) // Should not be NULL, it's just a string conversion.
-      throw (APIException) new APIException("Failed: returned response body was null for output: "+output).adviseRetry();
+      throw new JSONException(output);
     return ret;
     
   }
@@ -160,14 +160,14 @@ public class RestAPIHelper {
         log.info("Server responded with 500. Retrying in a few seconds...(" + retries + ")");
         Thread.sleep(RETRY_SLEEP_MS);
       } else {
-        throw (APIException) new APIException("Failed : HTTP error code : " + response.getStatus()).adviseRetry();
+        throw new APIException("Failed : HTTP error code : " + response.getStatus());
       }
       retries++;
 
     } while (retries < MAX_RETRIES);
 
     if (retries == MAX_RETRIES) {
-      throw (APIException) new APIException("Failed: max retries exceeded").adviseRetry();
+      throw new APIException("Failed: max retries exceeded");
     }
 
     String output = response.getEntity(String.class);
@@ -175,7 +175,7 @@ public class RestAPIHelper {
     
     JSONObject ret = JSONUtil.parseObj(output);
     if (ret == null) // Should not be NULL
-      throw (APIException) new APIException("Failed: returned response body was null for output: "+output).adviseRetry();
+      throw new JSONException(output);
     return ret;
     
   }

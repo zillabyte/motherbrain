@@ -1,8 +1,8 @@
 package com.zillabyte.motherbrain.flow.buffer;
 
-import net.sf.json.JSONObject;
-
 import com.zillabyte.motherbrain.flow.MapTuple;
+
+import net.sf.json.JSONObject;
 
 /**
  * 

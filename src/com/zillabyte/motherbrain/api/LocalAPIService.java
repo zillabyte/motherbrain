@@ -2,14 +2,11 @@ package com.zillabyte.motherbrain.api;
 
 import java.util.Collection;
 
+import com.zillabyte.motherbrain.flow.MapTuple;
+import com.zillabyte.motherbrain.utils.Utils;
+
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
-import net.sf.json.util.JSONBuilder;
-import net.sf.json.util.JSONStringer;
-
-import com.zillabyte.motherbrain.flow.MapTuple;
-import com.zillabyte.motherbrain.utils.JSONUtil;
-import com.zillabyte.motherbrain.utils.Utils;
 
 public class LocalAPIService implements APIService {
 
@@ -35,27 +32,8 @@ public class LocalAPIService implements APIService {
 
   @Override
   public JSONObject postRelationSettingsForNextVersion(String relationName, JSONArray jsonSchema, String bufferType, String authToken) throws APIException {
-    JSONBuilder builder = new JSONStringer();
-    builder.object()
-      .key("buffer_settings").object()
-        .key("topic").value(relationName)
-        .key("source").object()
-          .key("type").value("s3")
-          .key("retry").value(0)
-          .key("config").object()
-            .key("shard_path").value(relationName)
-            .key("shard_prefix").value("shard_")
-            .key("bucket").value("local")
-            .key("credentials").object()
-              .key("secret").value("")
-              .key("access").value("")
-            .endObject()
-          .endObject()
-        .endObject()
-      .endObject()
-    .endObject();
-    
-    return JSONUtil.parseObj(builder.toString()); // Builder to JSONObject?
+    // TODO Auto-generated method stub
+    return null;
   }
 
   @Override
