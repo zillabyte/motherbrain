@@ -1,5 +1,6 @@
 package com.zillabyte.motherbrain.coordination;
 
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeoutException;
 
 import com.zillabyte.motherbrain.universe.Config;
@@ -86,29 +87,29 @@ public class CoordinationServiceWrapper implements CoordinationService {
     _delegate.sendMessage(channel, message);
   }
 
-  public void sendTransactionalMessage(String channel, Object message, long timeout) throws CoordinationException, TimeoutException {
-    _delegate.sendTransactionalMessage(channel, message, timeout);
+  public void sendTransactionalMessage(ExecutorService exec, String channel, Object message, long timeout) throws CoordinationException, TimeoutException {
+    _delegate.sendTransactionalMessage(exec, channel, message, timeout);
   }
 
-  public void sendTransactionalMessage(String channel, Object message) throws CoordinationException, TimeoutException {
-    _delegate.sendTransactionalMessage(channel, message, getDefaultTransactionMessageTimeout());
+  public void sendTransactionalMessage(ExecutorService exec, String channel, Object message) throws CoordinationException, TimeoutException {
+    _delegate.sendTransactionalMessage(exec, channel, message, getDefaultTransactionMessageTimeout());
   }
   
   
-  public Watcher watchForMessage(String channel, MessageHandler messageHandler) throws CoordinationException {
-    return _delegate.watchForMessage(channel, messageHandler);
+  public Watcher watchForMessage(ExecutorService exec, String channel, MessageHandler messageHandler) throws CoordinationException {
+    return _delegate.watchForMessage(exec, channel, messageHandler);
   }
 
-  public Watcher watchForAsk(String channel, AskHandler askHandler) throws CoordinationException {
-    return _delegate.watchForAsk(channel, askHandler);
+  public Watcher watchForAsk(ExecutorService exec, String channel, AskHandler askHandler) throws CoordinationException {
+    return _delegate.watchForAsk(exec, channel, askHandler);
   }
 
-  public Object ask(String channel, Object message, long timeout) throws CoordinationException, TimeoutException {
-    return _delegate.ask(channel, message, timeout);
+  public Object ask(ExecutorService exec, String channel, Object message, long timeout) throws CoordinationException, TimeoutException {
+    return _delegate.ask(exec, channel, message, timeout);
   }
   
-  public Object ask(String channel, Object message) throws CoordinationException, TimeoutException {
-    return _delegate.ask(channel, message, getDefaultAskTimeout());
+  public Object ask(ExecutorService exec, String channel, Object message) throws CoordinationException, TimeoutException {
+    return _delegate.ask(exec, channel, message, getDefaultAskTimeout());
   }
 
   

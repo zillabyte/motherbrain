@@ -34,16 +34,12 @@ public class ExceptionHandler implements Serializable {
   public static class RemoteReporter extends ExceptionHandler {
     private static final long serialVersionUID = 4846247203646024084L; 
 
-    public static final @NonNull String STATE_STREAM = "/unhanded_errors";
+    // public static final @NonNull String STATE_STREAM = "/unhanded_errors";
     
     @Override
     public void handle(Throwable e) throws InterruptedException, CoordinationException {
       super.handle(e);
-      Map<String, Object> map = Maps.newHashMap();
-      map.put("error", e);
-      map.put("time", DateHelper.formattedDate());
-      map.put("machine", Utils.getHost());
-      Universe.instance().state().sendMessage(STATE_STREAM, map);
+      // TODO
     } 
   }
   

@@ -115,7 +115,7 @@ public abstract class Source extends Operation {
            * circumstances, this should always return true or false.  Only when redis/network 
            * issues are afoot will it throw the exception. 
            */
-          return (Boolean) Universe.instance().state().ask(flowStateKey() + "/emit_permission", Boolean.FALSE, timeout);
+          return (Boolean) Universe.instance().state().ask(_executor, flowStateKey() + "/emit_permission", Boolean.FALSE, timeout);
           
         }
       });
