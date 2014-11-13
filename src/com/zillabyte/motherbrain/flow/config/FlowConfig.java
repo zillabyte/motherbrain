@@ -2,9 +2,9 @@ package com.zillabyte.motherbrain.flow.config;
 
 import java.util.Map;
 
-import com.zillabyte.motherbrain.utils.JSONUtil;
-
 import net.sf.json.JSONObject;
+
+import com.zillabyte.motherbrain.utils.JSONUtil;
 
 /*************************
  * Flow Config

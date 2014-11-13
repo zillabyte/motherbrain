@@ -14,8 +14,8 @@ import org.newsclub.net.unix.AFUNIXSocketAddress;
 
 import com.google.monitoring.runtime.instrumentation.common.com.google.common.base.Throwables;
 import com.zillabyte.motherbrain.utils.FileLockUtil;
-import com.zillabyte.motherbrain.utils.Utils;
 import com.zillabyte.motherbrain.utils.FileLockUtil.MultiLock;
+import com.zillabyte.motherbrain.utils.Utils;
 
 
 public class UnixSocketHelper {
@@ -102,7 +102,7 @@ public class UnixSocketHelper {
       server.bind(new AFUNIXSocketAddress(socketFile));
       return server;
     } catch (Exception e) {
-      throw new ContainerException(e);
+      throw (ContainerException) new ContainerException(e).setUserMessage("Failed to initialize Unix Socket.").adviseRetry();
     }
   }
   
