@@ -1,10 +1,11 @@
 package com.zillabyte.motherbrain.flow.components.builtin;
 
+import net.sf.json.JSONObject;
+
 import com.zillabyte.motherbrain.flow.Component;
 import com.zillabyte.motherbrain.flow.Flow;
+import com.zillabyte.motherbrain.flow.FlowCompilationException;
 import com.zillabyte.motherbrain.flow.config.FlowConfig;
-
-import net.sf.json.JSONObject;
 
 public class BuiltinComponents {
 
@@ -17,7 +18,7 @@ public class BuiltinComponents {
   }
   
   
-  public static Component create(String name, FlowConfig flowConfig) {
+  public static Component create(String name, FlowConfig flowConfig) throws FlowCompilationException {
     switch(name) {
     case "fetch_url": 
       return FetchUrlComponent.create(flowConfig);
@@ -26,7 +27,7 @@ public class BuiltinComponents {
   }
 
 
-  public static Flow create(String flowId, JSONObject overrideConfig) {
+  public static Flow create(String flowId, JSONObject overrideConfig) throws FlowCompilationException {
     return create(flowId, (FlowConfig) FlowConfig.createEmpty().setAll(overrideConfig));
   }
   
