@@ -1,6 +1,8 @@
 package com.zillabyte.motherbrain.reactor.lightweight;
 
-public class ProcessTimeoutException extends Exception {
+import com.zillabyte.motherbrain.top.MotherbrainException;
+
+public class ProcessTimeoutException extends MotherbrainException {
 
 
   private static final long serialVersionUID = 2842787168157005878L;
