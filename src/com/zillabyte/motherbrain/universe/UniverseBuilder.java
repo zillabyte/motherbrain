@@ -9,6 +9,7 @@ import com.zillabyte.motherbrain.flow.FlowService;
 import com.zillabyte.motherbrain.flow.aggregation.AggregationStoreFactory;
 import com.zillabyte.motherbrain.flow.buffer.BufferClientFactory;
 import com.zillabyte.motherbrain.flow.buffer.BufferService;
+import com.zillabyte.motherbrain.flow.error.strategies.ErrorStrategyFactory;
 import com.zillabyte.motherbrain.flow.operations.multilang.builder.FlowBuilderFactory;
 import com.zillabyte.motherbrain.flow.rpc.queues.QueueFactory;
 import com.zillabyte.motherbrain.metrics.Metrics;
@@ -28,6 +29,11 @@ public class UniverseBuilder {
   
   public UniverseBuilder withAPIService(APIService s) {
     _universe._api = s;
+    return this;
+  }
+  
+  public UniverseBuilder withErrorStrategy(ErrorStrategyFactory s) {
+    _universe._errorStrategyFactory = s;
     return this;
   }
   
