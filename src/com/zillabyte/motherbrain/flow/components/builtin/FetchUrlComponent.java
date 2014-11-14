@@ -136,8 +136,8 @@ public class FetchUrlComponent {
         _log.error("interrupted");
       } catch (IOException e) {
         throw (OperationException) new OperationException(this, e).setUserMessage("Error reading/writing in \""+instanceName()+"\".");
-      } catch (URISyntaxException e1) {
-        throw (OperationException) new OperationException(this, e1).setUserMessage("URI SyntaxException in \""+instanceName()+"\".");
+      } catch (Exception e1) {
+        throw (OperationException) new OperationException(this, e1).setUserMessage(e1.getMessage());
       }
       
     }
