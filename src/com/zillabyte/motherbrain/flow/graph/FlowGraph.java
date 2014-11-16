@@ -482,11 +482,14 @@ public final class FlowGraph implements Serializable {
 
 
 
-  public Connection getConnectionByStream(String streamName) {
+  public List<Connection> getConnectionByStream(String streamName) {
+    List<Connection> connections = Lists.newArrayList();
     for(Connection c : this._arcs) {
-      if (c.streamName().equals(streamName)) return c;
+      if (c.streamName().equals(streamName)) {
+        connections.add(c);
+      }
     }
-    return null;
+    return connections;
   }
 
 
