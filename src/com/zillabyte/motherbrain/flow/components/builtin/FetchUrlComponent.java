@@ -134,12 +134,9 @@ public class FetchUrlComponent {
         
       } catch (InterruptedException e) {
         _log.error("interrupted");
-      } catch (IOException e) {
-        throw (OperationException) new OperationException(this, e).setUserMessage("Error reading/writing in \""+instanceName()+"\".");
-      } catch (Exception e1) {
-        throw (OperationException) new OperationException(this, e1).setUserMessage(e1.getMessage());
+      } catch (Exception e) {
+        _log.error("exception: " + e.getMessage());
       }
-      
     }
   }
 
