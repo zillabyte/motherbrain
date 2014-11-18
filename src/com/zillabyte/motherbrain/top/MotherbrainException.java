@@ -54,6 +54,10 @@ public abstract class MotherbrainException extends Exception {
 
   public MotherbrainException(Throwable e) {
     this(null, null, e);
+    if(e instanceof MotherbrainException) {
+      _internalMessage = ((MotherbrainException)e).getInternalMessage();
+      _userMessage = ((MotherbrainException)e).getUserMessage();
+    }
   }
   
   ////////////////////////////////////////////////////////////////////
@@ -69,6 +73,12 @@ public abstract class MotherbrainException extends Exception {
     }
   }
 
+  public MotherbrainException setAllMessages(String message) {
+    this._internalMessage = message;
+    this._userMessage = message;
+    return this;
+  }
+  
   public String getInternalMessage() {
     return _internalMessage;
   }
@@ -77,7 +87,7 @@ public abstract class MotherbrainException extends Exception {
     this._internalMessage = _internalMessage;
     return this;
   }
-
+  
   public String getUserMessage() {
     return _userMessage;
   }
@@ -92,6 +102,11 @@ public abstract class MotherbrainException extends Exception {
 
   public long getDate() {
     return this._date;
+  }
+  
+  public MotherbrainException adviseRetry() {
+    this._userMessage += " If there are no other errors, please try re-pushing. If the problem persists, please contact support@zillabyte.com. We apologize for the inconvenience.";
+    return this;
   }
   
   

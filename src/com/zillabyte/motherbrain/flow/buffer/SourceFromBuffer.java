@@ -158,7 +158,7 @@ public class SourceFromBuffer extends Source {
 
 
   @Override
-  public void prepare() throws MultiLangException, InterruptedException {
+  public void prepare() throws MultiLangException, OperationException, InterruptedException {
     super.prepare();
     MockInstanceHelper.registerInstance(this);
   }

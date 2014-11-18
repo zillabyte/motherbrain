@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -70,7 +71,7 @@ public class AskWrapper implements Serializable {
    * @throws InterruptedException
    * @throws CoordinationException 
    */
-  public final boolean sendTransactionalMessage(final String stream, final Object message, long timeout) throws CoordinationException, TimeoutException {
+  public final boolean sendTransactionalMessage(ExecutorService exec, final String stream, final Object message, long timeout) throws CoordinationException, TimeoutException {
     
     // Init 
     final UUID returnMessage = UUID.randomUUID();
@@ -80,7 +81,7 @@ public class AskWrapper implements Serializable {
     _log.info("Sending message "+message +" on stream "+stream+". Watching for response on "+returnStream);
     
     // Watch for reply...
-    Watcher watcher = _service.watchForMessage(wrapper.returnStream, new MessageHandler() {
+    Watcher watcher = _service.watchForMessage(exec, wrapper.returnStream, new MessageHandler() {
       @Override
       public void handleNewMessage(String key, Object raw) throws InterruptedException {
 //          _log.info("transactional response on "+returnStream+": " + key + " object: " + raw);
@@ -99,11 +100,11 @@ public class AskWrapper implements Serializable {
       
       // Sanity
       if (o == null ) throw new TimeoutException("Timeout waiting for response on stream: " + stream);
-      if (o instanceof Exception) throw new RemoteCoordinationException(((Exception)o));
+      if (o instanceof Exception) throw (RemoteCoordinationException) new RemoteCoordinationException(((Exception)o)).adviseRetry();
       debug("response received "+stream);
 
     } catch(InterruptedException e) {
-      throw new CoordinationException(e);
+      throw (CoordinationException) new CoordinationException(e).adviseRetry();
       
     } finally {
       debug("unsubscribing");
@@ -136,7 +137,7 @@ public class AskWrapper implements Serializable {
    * @throws InterruptedException 
    * @throws CoordinationException 
    */
-  public final Object ask(final String rawStream, final Object value, final long timeout) throws TimeoutException, CoordinationException {
+  public final Object ask(ExecutorService exec, final String rawStream, final Object value, final long timeout) throws TimeoutException, CoordinationException {
     
       // INIT 
 //      _log.info("ASK: asking on " + rawStream + " with param " + value + " and timeout: " + timeout);
@@ -151,7 +152,7 @@ public class AskWrapper implements Serializable {
       map.put("value", value);
       
       // Watch for response
-      final Watcher watcher = _service.watchForMessage(responseStream, new MessageHandler() {
+      final Watcher watcher = _service.watchForMessage(exec, responseStream, new MessageHandler() {
         @Override
         public void handleNewMessage(String key, Object raw) throws InterruptedException {
 //          _log.info("Recieved ask response at " + key + ": " + raw);
@@ -174,7 +175,7 @@ public class AskWrapper implements Serializable {
       
       // Errors
       if (reply instanceof Exception) {
-        throw new RemoteCoordinationException((Exception)reply);
+        throw (RemoteCoordinationException) new RemoteCoordinationException((Exception)reply).adviseRetry();
       }
       
       // Done
@@ -188,15 +189,16 @@ public class AskWrapper implements Serializable {
    *
    * @param rawStream
    * @param askHandler
+   * @param exec 
    */
-  public final Watcher watchForAsk(final String rawStream, final AskHandler askHandler) throws CoordinationException {
+  public final Watcher watchForAsk(ExecutorService executor, final String rawStream, final AskHandler askHandler) throws CoordinationException {
     
     // INIT
     final String stream = ASK_PREFIX + rawStream;
 //    _log.info("ask watching on: " + stream + " with handler: " + askHandler.toString());
     
     // Start watching...  
-    Watcher watcher = _service.watchForMessage(stream, new MessageHandler() {
+    Watcher watcher = _service.watchForMessage(executor, stream, new MessageHandler() {
       
       @Override
       public void handleNewMessage(String key, Object payload) throws Exception {
@@ -207,8 +209,8 @@ public class AskWrapper implements Serializable {
         Object value = map.get("value");
         
         // Sanity checks
-        if (value == null) throw new RedisException("value should not be null!");
-        if (responseStream == null) throw new RedisException("responseStream should not be null!");
+        if (value == null) throw (RedisException) new RedisException("value should not be null!").adviseRetry();
+        if (responseStream == null) throw (RedisException) new RedisException("responseStream should not be null!").adviseRetry();
         
         // Call the handler
         final Object result = askHandler.handleAsk(key, value);

@@ -38,7 +38,7 @@ public class RenameFields implements EmitDecorator {
   @Override
   public MapTuple execute(MapTuple t) throws MotherbrainException {
     for(Entry<String, String> e : _renameMap.entrySet()) {
-      if (e.getValue() == null) throw new FlowCompilationException("cannot map to null value: " + e.toString());
+      if (e.getValue() == null) throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Cannot rename null value: " + e.toString());
       Object val = t.get(e.getKey());
       t.remove(e.getKey());
       t.put(e.getValue(), val);

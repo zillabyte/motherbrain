@@ -15,6 +15,7 @@ import com.ning.http.client.AsyncHttpClientConfig.Builder;
 import com.ning.http.client.HttpResponseBodyPart;
 import com.ning.http.client.Response;
 import com.zillabyte.motherbrain.flow.Component;
+import com.zillabyte.motherbrain.flow.FlowCompilationException;
 import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.StreamBuilder.ComponentStreamBuilder;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
@@ -133,12 +134,9 @@ public class FetchUrlComponent {
         
       } catch (InterruptedException e) {
         _log.error("interrupted");
-      } catch (IOException e) {
-        throw new OperationException(this, e);
-      } catch (URISyntaxException e1) {
-        throw new OperationException(this, e1);
+      } catch (Exception e) {
+        _log.error("exception: " + e.getMessage());
       }
-      
     }
   }
 
@@ -149,7 +147,7 @@ public class FetchUrlComponent {
   private static Logger _log = Utils.getLogger(FetchUrlComponent.class);
 
   
-  public static Component create(final FlowConfig config) {
+  public static Component create(final FlowConfig config) throws FlowCompilationException {
     
     Component c = new Component("fetch_url", config);
     ComponentStreamBuilder sb = c.createStream(

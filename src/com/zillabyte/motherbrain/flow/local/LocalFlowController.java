@@ -82,22 +82,26 @@ public class LocalFlowController {
   public List<Integer> emitToStream(String streamName, MapTuple tuple, Integer sourceTask) {
     
     // Find the operation this stream goes to.. 
-    Connection connection = graph().getConnectionByStream(streamName);
-    if (connection == null) throw new RuntimeException("Stream not found: " + streamName);
-    String destOpId = connection.destId();
+    List<Connection> connections = graph().getConnectionByStream(streamName);
+    if (connections == null || connections.isEmpty()) throw new RuntimeException("Stream not found: " + streamName);
     
-    // Find all the instances of the dest..
-    List<LocalOperationSlot> slots = _operationInstanceMap.get(destOpId);
-    if (slots.size() == 0) throw new RuntimeException("no slots for operation: " + destOpId);
-    
-    // How shall we route this tuple?
     List<Integer> ret = Lists.newLinkedList();
-    if (slots.size() == 1) {
-      LocalOperationSlot slot = slots.get(0);
-      slot.enqueuTuple(sourceTask, streamName, tuple);
-      ret.add(slot.task());
-    } else {
-      Utils.TODO("implement round-robin and hash-based routing");
+    
+    for(Connection connection : connections) {
+      String destOpId = connection.destId();
+
+      // Find all the instances of the dest..
+      List<LocalOperationSlot> slots = _operationInstanceMap.get(destOpId);
+      if (slots.size() == 0) throw new RuntimeException("no slots for operation: " + destOpId);
+
+      // How shall we route this tuple?
+      if (slots.size() == 1) {
+        LocalOperationSlot slot = slots.get(0);
+        slot.enqueueTuple(sourceTask, streamName, tuple);
+        ret.add(slot.task());
+      } else {
+        Utils.TODO("implement round-robin and hash-based routing");
+      }
     }
     
     return ret; // TODO: return list of tasks
@@ -164,7 +168,7 @@ public class LocalFlowController {
       LocalOperationSlot slot = getSlotByTask(destTask);
       if (slot == null)
         throw new NullPointerException("could not find slot " + destTask);
-      slot.enqueuTuple(sourceTask, stream, tuple);
+      slot.enqueueTuple(sourceTask, stream, tuple);
     } else {
       // maybe we're just shutting down... 
       _log.warn("tuple emitted while slot is not running: " + tuple);

@@ -94,7 +94,7 @@ public final class ColumnDef implements Serializable {
     } else if(type.equalsIgnoreCase("map")) {
       return DataType.MAP;
     } else {
-      throw new FlowCompilationException("Unknown data type "+type);
+      throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Unknown data type: "+type+".");
     }
   }
   

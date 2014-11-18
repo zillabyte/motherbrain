@@ -4,14 +4,14 @@ package com.zillabyte.motherbrain.api;
 import java.io.Serializable;
 import java.util.List;
 
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+
 import com.zillabyte.motherbrain.flow.config.FlowConfig;
 import com.zillabyte.motherbrain.relational.BufferQuery;
 import com.zillabyte.motherbrain.relational.ColumnDef;
 import com.zillabyte.motherbrain.relational.Query;
 import com.zillabyte.motherbrain.universe.Universe;
-
-import net.sf.json.JSONArray;
-import net.sf.json.JSONObject;
 
 public class RelationsHelper implements Serializable {
 
@@ -37,7 +37,7 @@ public class RelationsHelper implements Serializable {
       final JSONObject bufferSettings = obj.getJSONObject("buffer_settings");
       
       if (bufferSettings == null){
-        throw new NoSuchFieldError("missing buffer_settings");
+        throw new APIException("missing buffer_settings").setUserMessage("An error occurred initializing your relation. Please delete relations associated with this app (if any) and re-push. If the problem persists, please contact support@zillabyte.com."); 
       }
       result = new BufferQuery(relationName, bufferSettings);
     }

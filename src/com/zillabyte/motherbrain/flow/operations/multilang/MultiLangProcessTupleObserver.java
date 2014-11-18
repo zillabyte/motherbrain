@@ -96,9 +96,9 @@ public class MultiLangProcessTupleObserver implements MultiLangMessageHandler {
         return true;
       }
     } else if (p instanceof Exception) {
-      throw new OperationException(_operation, (Exception)p);
+      throw (OperationException) new OperationException(_operation, (Exception)p).setAllMessages("An error occurred while emitting a tuple.");
     }  
-    throw new OperationException(_operation, "unknown type");
+    throw (OperationException) new OperationException(_operation).setAllMessages("The operation emitted data of uninterpretable type: "+p.getClass().getName()+".");
   }
 
   
@@ -159,7 +159,7 @@ public class MultiLangProcessTupleObserver implements MultiLangMessageHandler {
           try {
             streamName = _operation.defaultStream();
           } catch (DefaultStreamException e) {
-            throw new OperationException(_operation, e);
+            throw (OperationException) new OperationException(_operation, e).setAllMessages("Attempted to emit to non-existent default stream.");
           }
         }
         
@@ -249,16 +249,17 @@ public class MultiLangProcessTupleObserver implements MultiLangMessageHandler {
 
     // If we timeout above and not in paused state, something is likely wrong.
     if (p == null) {
-      throw new OperationException(_operation, "The process failed to emit a tuple or DONE signal in the timeout period");
+      throw (OperationException) new OperationException(_operation).setAllMessages("Timeout waiting for multilang process to emit a tuple or DONE signal.");
     }
     // Done
     throwUnhandledErrors();
     return p;
   }
+  
   private void throwUnhandledErrors() throws OperationException {
     // Do we have any unreported errors?
     for(MultiLangErrorHandler eh : this._proc.getErrorListeners()) {
-      eh.mabyeThrowNextError();
+      eh.maybeThrowNextError();
     }
   }
 

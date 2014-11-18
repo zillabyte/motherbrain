@@ -117,7 +117,6 @@ public class MultiLangProcessGeneralOperationObserver implements MultiLangMessag
       
       // Errors! 
       _log.error("error: " + obj.getString("msg"));
-      _operation.logger().writeLog(obj.getString("msg"), OperationLogger.LogPriority.ERROR);
       
       // Tell the operation to ERROR
       throw (OperationException)
@@ -268,7 +267,7 @@ public class MultiLangProcessGeneralOperationObserver implements MultiLangMessag
   }
 
   @Override
-  public void mabyeThrowNextError() throws OperationException {
+  public void maybeThrowNextError() throws OperationException {
     final Exception ex = getNextError();
     if (ex != null) {
       throw new OperationException(this._operation, ex);

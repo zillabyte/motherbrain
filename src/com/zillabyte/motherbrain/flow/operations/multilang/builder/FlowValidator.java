@@ -27,7 +27,7 @@ public class FlowValidator {
   
   public static void validateNotEmpty(Flow flow) throws FlowCompilationException {
     if (flow.getOperations().size() == 0) {
-      throw new FlowCompilationException("The app does not declare any operations.");
+      throw (FlowCompilationException) new FlowCompilationException().setAllMessages("The app does not declare any operations.");
     }
   }
   
@@ -39,7 +39,7 @@ public class FlowValidator {
       
       // An unsunk branch is simply an operation that doesn't have any successors, and is not a sink, or a join
       if (op.nextOperations().size() == 0 && op instanceof ComponentOutput == false) {
-        throw new FlowCompilationException("The stream originating from '" + op.namespaceName() + "' does not end in an output.  All streams must end in output.");
+        throw (FlowCompilationException) new FlowCompilationException().setAllMessages("The stream originating from '" + op.namespaceName() + "' does not end in an output.  All streams must end in output.");
       }
       if (op instanceof ComponentInput) {
         sources++;
@@ -50,7 +50,7 @@ public class FlowValidator {
     }
     
     if (sources == 0) {
-      throw new FlowCompilationException("The component does not declare any sources.");
+      throw (FlowCompilationException) new FlowCompilationException().setAllMessages("The component does not declare any sources.");
     }
       
   }
@@ -63,7 +63,7 @@ public class FlowValidator {
       // An unsunk branch is simply an operation that doesn't have any successors, and is
       // not a sink, or a join
       if (op.nextOperations().size() == 0 && op instanceof Sink == false) {
-        throw new FlowCompilationException("The stream originating from " + op.namespaceName() + " does not end in a sink.  All streams must be sunk.");
+        throw (FlowCompilationException) new FlowCompilationException().setAllMessages("The stream originating from " + op.namespaceName() + " does not end in a sink. All streams must be sunk.");
       }
       if (op instanceof Source) {
         sources++;
@@ -71,7 +71,7 @@ public class FlowValidator {
     }
     
     if (sources == 0) {
-      throw new FlowCompilationException("The app does not declare any sources.");
+      throw (FlowCompilationException) new FlowCompilationException().setAllMessages("The app does not declare any sources.");
     }
       
     

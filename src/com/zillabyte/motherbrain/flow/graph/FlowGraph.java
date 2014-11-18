@@ -20,6 +20,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.monitoring.runtime.instrumentation.common.com.google.common.collect.Maps;
 import com.zillabyte.motherbrain.flow.Flow;
+import com.zillabyte.motherbrain.flow.FlowCompilationException;
 import com.zillabyte.motherbrain.flow.operations.Operation;
 import com.zillabyte.motherbrain.flow.operations.Sink;
 import com.zillabyte.motherbrain.flow.operations.Source;
@@ -85,10 +86,10 @@ public final class FlowGraph implements Serializable {
    * @param dest
    * @return 
    */
-  public Connection connect(Operation source, Operation dest, String name, Boolean loopBack, Integer maxIter) {   
-    if (contains(source, dest)) throw new RuntimeException("connection already exists: " + source.operationId() + " -> " + dest.operationId());
+  public Connection connect(Operation source, Operation dest, String name, Boolean loopBack, Integer maxIter) throws FlowCompilationException {   
+    if (contains(source, dest)) throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Connection already exists: " + source.operationId() + " -> " + dest.operationId());
     
-    if (source.namespaceName().equals(dest.namespaceName()) && !loopBack) throw new RuntimeException("cannot connect operation to itself: " + source + " -> " + dest);
+    if (source.namespaceName().equals(dest.namespaceName()) && !loopBack) throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Cannot connect operation to itself unless it is a loopback: " + source + " -> " + dest + ".");
     
     Connection c = new Connection(this, source, dest, name, loopBack, maxIter);
     
@@ -99,7 +100,7 @@ public final class FlowGraph implements Serializable {
     return c;
   }
   
-  public Connection connect(Operation source, Operation dest, String name) {
+  public Connection connect(Operation source, Operation dest, String name) throws FlowCompilationException {
     return connect(source, dest, name, false, 0);
   }
   
@@ -373,7 +374,7 @@ public final class FlowGraph implements Serializable {
 
 
   
-  public void inject(String prefix, FlowGraph graph) {
+  public void inject(String prefix, FlowGraph graph) throws FlowCompilationException {
     for(Operation o : graph._idMap.values()) {
       o.addNamespacePrefix(prefix);
     }
@@ -481,11 +482,14 @@ public final class FlowGraph implements Serializable {
 
 
 
-  public Connection getConnectionByStream(String streamName) {
+  public List<Connection> getConnectionByStream(String streamName) {
+    List<Connection> connections = Lists.newArrayList();
     for(Connection c : this._arcs) {
-      if (c.streamName().equals(streamName)) return c;
+      if (c.streamName().equals(streamName)) {
+        connections.add(c);
+      }
     }
-    return null;
+    return connections;
   }
 
 

@@ -115,14 +115,14 @@ public abstract class Source extends Operation {
            * circumstances, this should always return true or false.  Only when redis/network 
            * issues are afoot will it throw the exception. 
            */
-          return (Boolean) Universe.instance().state().ask(flowStateKey() + "/emit_permission", Boolean.FALSE, timeout);
+          return (Boolean) Universe.instance().state().ask(_executor, flowStateKey() + "/emit_permission", Boolean.FALSE, timeout);
           
         }
       });
     } catch (ExecutionException e) {
       
-      // Some other error... propage. 
-      throw new OperationException(Source.this, e);
+      // Some other error... propagate. 
+      throw (OperationException) new OperationException(Source.this, e).setUserMessage("An error occurred in the source while it was asking for permission to start emitting.").adviseRetry();
       
     } catch (RetryException e) {
 
@@ -132,7 +132,7 @@ public abstract class Source extends Operation {
        * don't want operations waiting around, thinking they're forever stuck in STARTED. 
        * Instead, just die and let a new operation take its place. 
        */
-      throw new OperationException(Source.this, "can not get a response from master!");
+      throw (OperationException) new OperationException(Source.this).setAllMessages("Source operation failed to get a response from master while asking for emit permission.").adviseRetry();
     }
 
   }

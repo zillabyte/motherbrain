@@ -50,7 +50,7 @@ public abstract class Clumper extends AggregationOperation {
    * 
    */
   @Override
-  public void prepare() throws MultiLangException, InterruptedException {
+  public void prepare() throws MultiLangException, OperationException, InterruptedException {
     super.prepare();
     _clumpMaxCount = Long.parseLong(getLocalConfig().get("max_count", _clumpMaxCount.toString()));
     _clumpMaxInterval = Long.parseLong(getLocalConfig().get("max_interval_ms", _clumpMaxInterval.toString()));

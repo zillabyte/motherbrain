@@ -15,6 +15,7 @@ import com.zillabyte.motherbrain.flow.buffer.BufferClientFactory;
 import com.zillabyte.motherbrain.flow.buffer.BufferService;
 import com.zillabyte.motherbrain.flow.buffer.mock.LocalBufferClientFactory;
 import com.zillabyte.motherbrain.flow.buffer.mock.MockBufferService;
+import com.zillabyte.motherbrain.flow.error.strategies.ErrorStrategyFactory;
 import com.zillabyte.motherbrain.flow.local.LocalFlowService;
 import com.zillabyte.motherbrain.flow.operations.multilang.builder.FlowBuilderFactory;
 import com.zillabyte.motherbrain.flow.operations.multilang.builder.InplaceFlowBuilderFactory;
@@ -37,6 +38,10 @@ public class LocalUniverseBuilder {
 
   private Universe _universe = new Universe();
   
+  public LocalUniverseBuilder withErrorStrategy(ErrorStrategyFactory s) {
+    _universe._errorStrategyFactory = s;
+    return this;
+  }
   
   public LocalUniverseBuilder withAPIService(APIService s) {
     _universe._api = s;
@@ -211,6 +216,7 @@ public class LocalUniverseBuilder {
         .withAggregationStoreFactory(new DefaultAggregationStoreFactory())
         .withBufferClientFactory(new LocalBufferClientFactory())
         .withBufferService(new MockBufferService())
+        .withErrorStrategy(new ErrorStrategyFactory.Strict())
         .addShellFactory();
   }
   

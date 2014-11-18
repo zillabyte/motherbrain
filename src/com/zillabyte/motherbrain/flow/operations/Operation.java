@@ -13,6 +13,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -25,7 +26,6 @@ import org.javatuples.Triplet;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.monitoring.runtime.instrumentation.common.com.google.common.collect.LinkedListMultimap;
 import com.zillabyte.motherbrain.benchmarking.Benchmark;
@@ -93,6 +93,8 @@ public abstract class Operation implements Serializable {
   private Long _initial_stage_timeout_ms;
   private Long _pre_prepare_stage_timeout_ms;
   private Long _prepare_stage_timeout_ms;
+  
+  protected transient ExecutorService _executor = null;
 
   private SerializableMonitor _messageMonitor = new SerializableMonitor();
 
@@ -332,8 +334,9 @@ public abstract class Operation implements Serializable {
 
   /**
    * Override me!
+   * @throws OperationException 
    */
-  public void prepare() throws MultiLangException, InterruptedException {
+  public void prepare() throws MultiLangException, InterruptedException, OperationException {
   }
 
   /**
@@ -570,7 +573,7 @@ public abstract class Operation implements Serializable {
    * @throws CoordinationException
    * @throws StateMachineException
    */
-  public synchronized final void handleCleanup() throws Exception {
+  public synchronized final void handleCleanup()  {
 
     // Sanity...
     if (inState("KILLING", "KILLED"))
@@ -578,19 +581,44 @@ public abstract class Operation implements Serializable {
 
     // INIT
     _log.info(instanceName() + " cleaning up: " + this.toString());
-    if (!inState("ERROR", "ERRORING"))
-      transitionToState("KILLING");
+    if (!inState("ERROR", "ERRORING")) {
+      try {
+        transitionToState("KILLING");
+      } catch (StateMachineException | CoordinationException | TimeoutException e) {
+        e.printStackTrace();
+      }
+    }
 
-    // Cleanup
-    stopWatchingFlowCommands();
-    cleanup();
+    // Stop listeners... 
+    try {
+      stopWatchingFlowCommands();
+    } catch (CoordinationException e) {
+      e.printStackTrace();
+    }
+    
+    try {
+      cleanup();
+    } catch (OperationException | InterruptedException e) {
+      e.printStackTrace();
+    }
+    
     if (_heartbeat != null)
       _heartbeat.shutdown();
 
     // Done
-    if (!inState("ERROR", "ERRORING"))
-      transitionToState("KILLED");
+    if (!inState("ERROR", "ERRORING")) {
+      try {
+        transitionToState("KILLED");
+      } catch (StateMachineException | CoordinationException | TimeoutException e) {
+        e.printStackTrace();
+      }
+    }
 
+    // Stop threads related to this operaiton...
+    if (_executor != null) {
+      _log.info("stopping executor...");
+      _executor.shutdownNow();
+    }
   }
 
   /***
@@ -613,7 +641,7 @@ public abstract class Operation implements Serializable {
       Universe
           .instance()
           .state()
-          .sendTransactionalMessage(this.flowStateKey(),
+          .sendTransactionalMessage(_executor, this.flowStateKey(),
               OperationMessage.create(this, command, payload),
               _transactional_msg_timeout);
     }
@@ -682,16 +710,14 @@ public abstract class Operation implements Serializable {
   public String topFlowId() {
     final Flow flow = getTopFlow();
     if (flow == null) {
-      throw new NullPointerException("flow has not been set! "
-          + this.toString());
+      throw new NullPointerException("flow has not been set! " + this.toString());
     }
     return flow.getId();
   }
 
   public Flow getTopFlow() {
     if (this._containerFlow == null) {
-      throw new NullPointerException(
-          "setContainerFlow(..) has not been called! " + this.instanceName());
+      throw new NullPointerException("setContainerFlow(..) has not been called! " + this.instanceName());
     }
     return _containerFlow.getTopFlow();
   }
@@ -743,9 +769,7 @@ public abstract class Operation implements Serializable {
     final Operation op = iter.next();
     assert (op != null);
     if (iter.hasNext()) {
-      throw new RuntimeException(
-          "did not expect more than one prev operation for "
-              + this.instanceName() + " " + this.prevNonLoopOperations());
+      throw (OperationException) new OperationException(this).setAllMessages("Did not expect more than one prev operation for " + this.instanceName() + ". Prev ops: " + this.prevNonLoopOperations());
     }
     return op;
   }
@@ -766,22 +790,22 @@ public abstract class Operation implements Serializable {
     return this.getTopFlow().graph().nonLoopConnectionsFrom(this);
   }
 
-  public Connection nextNonLoopConnection() {
+  public Connection nextNonLoopConnection() throws OperationException {
     final Iterator<Connection> iter = this.nextNonLoopConnections().iterator();
     final Connection conn = iter.next();
     assert (conn != null);
     if (iter.hasNext()) {
-      throw new RuntimeException("did not expect more than one next connection");
+      throw (OperationException) new OperationException(this).setAllMessages("Did not expect more than one next connection for op: "+namespaceName()+". Next conns: " + this.nextNonLoopConnections());
     }
     return conn;
   }
 
-  public Connection prevNonLoopConnection() {
+  public Connection prevNonLoopConnection() throws OperationException {
     final Iterator<Connection> iter = this.prevNonLoopConnections().iterator();
     final Connection conn = iter.next();
     assert (conn != null);
     if (iter.hasNext()) {
-      throw new RuntimeException("did not expect more than one prev connection");
+      throw (OperationException) new OperationException(this).setAllMessages("Did not expect more than one prev connection for op: "+namespaceName()+". Prev conns: " + this.prevNonLoopConnections());
     }
     return conn;
   }
@@ -798,14 +822,12 @@ public abstract class Operation implements Serializable {
     return getTopFlow().graph().connectionsFrom(this.namespaceName());
   }
 
-  public Operation nextNonLoopOperation() {
+  public Operation nextNonLoopOperation() throws OperationException {
     final Iterator<Operation> iter = this.nextNonLoopOperations().iterator();
     final Operation op = iter.next();
     assert (op != null);
     if (iter.hasNext()) {
-      throw new RuntimeException(
-          "did not expect more than one next operation for "
-              + this.instanceName());
+      throw (OperationException) new OperationException(this).setAllMessages("Did not expect more than one next operation for " + this.instanceName()+". Next ops: "+this.nextNonLoopOperations());
     }
     return op;
   }
@@ -824,11 +846,9 @@ public abstract class Operation implements Serializable {
   /***
    * 
    */
-  public void addExpectedFields(final String stream, final Fields fields)
-      throws OperationException {
+  public void addExpectedFields(final String stream, final Fields fields) throws OperationException {
     if (outputStreams().contains(stream) == false) {
-      throw new OperationException(this, "the stream " + stream
-          + " has not been declared. Declared: " + outputStreams().toString());
+      throw (OperationException) new OperationException(this).setAllMessages("The stream " + stream + " has not been declared. Declared: " + outputStreams().toString());
     }
     if (_expectedFields.containsKey(stream) == false) {
       _expectedFields.put(stream, new Fields());
@@ -917,8 +937,7 @@ public abstract class Operation implements Serializable {
 
   private void applySnapshotIfExists_ThreadUnsafe() {
     // Apply a snapshot if it exists
-    _operationLogger.writeLog("checking for snapshot...",
-        OperationLogger.LogPriority.SYSTEM);
+    _operationLogger.writeLog("checking for snapshot...", OperationLogger.LogPriority.SYSTEM);
 
     try {
       Utils.retryUnchecked(3, new Callable<Void>() {
@@ -928,32 +947,26 @@ public abstract class Operation implements Serializable {
             
             String snapshotJSON = Universe.instance().dfsService().readFileAsString(s3SnapshotKey());
             if (snapshotJSON != null) {
-              _operationLogger.writeLog("found snapshot, applying...",
-                  OperationLogger.LogPriority.SYSTEM);
+              _operationLogger.writeLog("found snapshot, applying...", OperationLogger.LogPriority.SYSTEM);
               JSONObject snapshot = JSONUtil.parseObj(snapshotJSON);
               applySnapshot(snapshot);
-              _operationLogger.writeLog("applied snapshot",
-                  OperationLogger.LogPriority.SYSTEM);
+              _operationLogger.writeLog("applied snapshot", OperationLogger.LogPriority.SYSTEM);
 
               // Delete old snapshot
-              _operationLogger.writeLog("deleting old snapshot...",
-                  OperationLogger.LogPriority.SYSTEM);
+              _operationLogger.writeLog("deleting old snapshot...", OperationLogger.LogPriority.SYSTEM);
               
               Universe.instance().dfsService().deleteFile(s3SnapshotKey());
-              _operationLogger.writeLog("deleted snapshot",
-                  OperationLogger.LogPriority.SYSTEM);
+              _operationLogger.writeLog("deleted snapshot", OperationLogger.LogPriority.SYSTEM);
 
             }
           } catch (IOException e) {
-            throw new OperationException(e.toString());
+            throw (OperationException) new OperationException(Operation.this, e).setAllMessages("An error occurred while handling operation snapshot.");
           }
           return null;
         }
       });
     } catch (Exception e) {
-      _operationLogger.writeLog("error applysnapshot: " + e.getMessage(),
-          OperationLogger.LogPriority.ERROR);
-
+      _operationLogger.writeLog("error applying snapshot: " + e.getMessage(), OperationLogger.LogPriority.ERROR);
     }
   }
 
@@ -975,10 +988,7 @@ public abstract class Operation implements Serializable {
       if (!getState().equalsIgnoreCase("ERROR"))
         transitionToState("PAUSING");
     } catch (StateMachineException | CoordinationException | TimeoutException e) {
-      _operationLogger
-          .writeLog(
-              "An error occurred while transitioning to PAUSING: "
-                  + e.getMessage(), OperationLogger.LogPriority.ERROR);
+      _operationLogger.writeLog("An error occurred while transitioning to PAUSING: " + e.getMessage(), OperationLogger.LogPriority.ERROR);
     }
 
     // Spin on queue for emitting
@@ -988,24 +998,20 @@ public abstract class Operation implements Serializable {
     }
   
     // upload snapshot
-    _operationLogger.writeLog("Creating snapshot",
-        OperationLogger.LogPriority.SYSTEM);
+    _operationLogger.writeLog("Creating snapshot", OperationLogger.LogPriority.SYSTEM);
     Utils.retryUnchecked(3, new Callable<Void>() {
       @Override
-      public Void call() throws Exception {
+      public Void call() throws OperationException {
         JSONObject snapshot = createSnapshot();
 
         if (!snapshot.isEmpty()) {
           try {
 
-            _operationLogger.writeLog(
-                "created snapshot, uploading to S3... at " + s3SnapshotKey(),
-                OperationLogger.LogPriority.SYSTEM);
+            _operationLogger.writeLog("created snapshot, uploading to S3... at " + s3SnapshotKey(), OperationLogger.LogPriority.SYSTEM);
             Universe.instance().dfsService().writeFile(s3SnapshotKey(), snapshot.toString());
-            _operationLogger.writeLog("Uploaded snapshot ",
-                OperationLogger.LogPriority.SYSTEM);
+            _operationLogger.writeLog("Uploaded snapshot ", OperationLogger.LogPriority.SYSTEM);
           } catch (IOException | S3Exception | InterruptedException e) {
-            throw new OperationException(e.toString());
+            throw (OperationException) new OperationException(Operation.this, e).setAllMessages("An error occured during snapshot creation.");
           }
         }
         return null;
@@ -1017,9 +1023,7 @@ public abstract class Operation implements Serializable {
       if (!getState().equalsIgnoreCase("ERROR"))
         transitionToState("PAUSED");
     } catch (StateMachineException | CoordinationException | TimeoutException e) {
-      _operationLogger.writeLog(
-          "An error occurred while transitioning to PAUSED: " + e.getMessage(),
-          OperationLogger.LogPriority.ERROR);
+      _operationLogger.writeLog("An error occurred while transitioning to PAUSED: " + e.getMessage(), OperationLogger.LogPriority.ERROR);
     }
   }
   
@@ -1148,6 +1152,9 @@ public abstract class Operation implements Serializable {
             Lock lock = Universe.instance().state().lock("flow_instance_index_" + lockPrefix());
             if (lock == null) throw new NullPointerException("null lock?: " + Universe.instance().state());
 
+            // Create an executor for hearts & state services
+            _executor = Utils.createPrefixedExecutorPool("flow-" + topFlowId() + "-operation-" + instanceName());
+            
             try {
 
               // Get the next instance id..
@@ -1170,7 +1177,7 @@ public abstract class Operation implements Serializable {
             _operationLogger = Universe.instance().loggerFactory().logger(topFlowId(), instanceName(), getTopFlow().getFlowConfig().getAuthToken());
 
             // Start the heartbeat
-            _heartbeat = Heartbeat.create(Operation.this);
+            _heartbeat = Heartbeat.create(Operation.this, _executor);
             reportInfo(); // report to flow that we are alive
 
             // Start logging to the user...
@@ -1220,7 +1227,7 @@ public abstract class Operation implements Serializable {
          **************************************************/
         Utils.executeWithin(_prepare_stage_timeout_ms, new Callable<Void>() {
           @Override
-          public Void call() throws MultiLangException, InterruptedException {
+          public Void call() throws MultiLangException, OperationException, InterruptedException {
 
             _log.info("begin prepare stage");
             Benchmark.markBegin("operation.prepare.actual");
@@ -1235,28 +1242,23 @@ public abstract class Operation implements Serializable {
         });
 
       } catch (ExecutionException e) {
-        logger().error(
-            "Critical error in prepare stage for " + instanceName() + ".");
+        logger().error("Critical error in prepare stage for " + instanceName() + ".");
         if (!Universe.instance().env().isProd()) {
           logger().error("Internal error: " + ExceptionUtils.getStackTrace(e));
         }
         handleFatalError(e);
 
       } catch (TimeoutException e) {
-        handleFatalError(new OperationException(this, e)
-            .setUserMessage("Prepare timeout exceeded"));
-
+        handleFatalError(new OperationException(this, e).setUserMessage("Prepare timeout exceeded."));
       }
 
       try {
         if (this.getState().equals("ERROR")) {
-          _operationLogger.writeLog("Error detected during prepare phase",
-              OperationLogger.LogPriority.ERROR);
+          _operationLogger.writeLog("Error detected during prepare phase", OperationLogger.LogPriority.ERROR);
         } else {
           // Success
           postPrepare();
-          _operationLogger.writeLog("Prepare complete",
-              OperationLogger.LogPriority.STARTUP);
+          _operationLogger.writeLog("Prepare complete", OperationLogger.LogPriority.STARTUP);
         }
       } catch (Exception e) {
         handleFatalError(e);
@@ -1279,20 +1281,19 @@ public abstract class Operation implements Serializable {
       _flowCommandWatcher  = Universe
           .instance()
           .state()
-          .watchForMessage(flowStateKey() + "/operation_commands",
+          .watchForMessage(_executor, flowStateKey() + "/operation_commands",
               new MessageHandler() {
                 @Override
                 public final void handleNewMessage(String key, Object command)
                     throws OperationException, InterruptedException {
 
                   // Let subclasses handle it...
-                  _log.info(Operation.this.instanceName()
-                      + " received operation_command: " + command);
+                  _log.info(Operation.this.instanceName() + " received operation_command: " + command);
                   // System.err.println("foo");
                   try {
                     handleFlowCommand((String) command);
                   } catch (Exception e) {
-                    throw new OperationException(Operation.this, e);
+                    throw (OperationException) new OperationException(Operation.this, e).setAllMessages("An error occurred while handling the flow command: "+command+".");
                   }
                 }
 
@@ -1318,15 +1319,8 @@ public abstract class Operation implements Serializable {
    */
   protected void handleFlowCommand(String command) throws Exception {
     if (command.equalsIgnoreCase("die")) {
-      try {
-        _operationLogger.writeLog("killing ourself...(" + this.instanceName() + ")", OperationLogger.LogPriority.RUN);
-        handleCleanup();
-      } catch (MultiLangException ex) {
-        throw new OperationException(this, ex);
-      } catch (StateMachineException | TimeoutException | CoordinationException e) {
-        _log.warn("An error occured while trying to transition to KILLING state: "
-            + e.getMessage());
-      }
+      _operationLogger.writeLog("killing ourself...(" + this.instanceName() + ")", OperationLogger.LogPriority.RUN);
+      handleCleanup();
 
     } else if (command.equalsIgnoreCase("report")) {
 

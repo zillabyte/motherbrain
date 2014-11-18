@@ -129,7 +129,7 @@ public class APIFlowBuilder implements FlowFetcher {
       }
        
     } catch(InterruptedException | MultiLangProcessException | ContainerException | TimeoutException | APIException | IOException | S3Exception e) {
-      throw new FlowCompilationException(e);
+      throw (FlowCompilationException) new FlowCompilationException(e).setUserMessage("An error occurred while pulling flow "+flowName+" from our servers.").adviseRetry();
     }
   }
 

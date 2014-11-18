@@ -56,10 +56,13 @@ public class Universe implements Serializable {
   protected  ContainerFactory _containerFactory = null;
   protected  BufferClientFactory _bufferClientFactory = null;
   protected  BufferService _bufferService = null;
+  protected  ErrorStrategyFactory _errorStrategyFactory = null;
+  
   
   // Misc 
   Config _config = new Config();
   Environment _env = null;
+  
   
   // Singleton 
   private static Universe _instance = null;
@@ -152,9 +155,8 @@ public class Universe implements Serializable {
   }
   
   
-  public ErrorStrategyFactory errorStrategyFactory() {
-    // don't worry about making this a proper factory until we have more error strategies. 
-    return new ErrorStrategyFactory.Strict();
+  public ErrorStrategyFactory errorStrategyFactory() { 
+    return _errorStrategyFactory;
   }
 
 
