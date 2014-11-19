@@ -1353,7 +1353,7 @@ public abstract class Operation implements Serializable {
     if (_namespacePrefix == null || _namespacePrefix.equals("")) {
       _namespacePrefix = prefix;
     } else {
-      _namespacePrefix = _namespacePrefix + "." + prefix;
+      _namespacePrefix = prefix + "." + _namespacePrefix;
     }
   }
 
