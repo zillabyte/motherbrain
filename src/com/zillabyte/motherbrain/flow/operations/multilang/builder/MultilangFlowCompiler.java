@@ -8,7 +8,6 @@ import java.util.concurrent.TimeoutException;
 
 import net.sf.json.JSONObject;
 
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.log4j.Logger;
 
@@ -49,6 +48,7 @@ import com.zillabyte.motherbrain.flow.operations.multilang.operations.LocalCompo
 import com.zillabyte.motherbrain.flow.operations.multilang.operations.MultiLangAggregator;
 import com.zillabyte.motherbrain.flow.operations.multilang.operations.MultiLangRunEach;
 import com.zillabyte.motherbrain.flow.operations.multilang.operations.MultiLangRunSource;
+import com.zillabyte.motherbrain.flow.operations.multilang.operations.MultilangClumper;
 import com.zillabyte.motherbrain.universe.Config;
 import com.zillabyte.motherbrain.universe.Universe;
 import com.zillabyte.motherbrain.utils.JSONUtil;
@@ -543,7 +543,8 @@ public class MultilangFlowCompiler {
         break;
 
       case "clump":
-        throw new NotImplementedException();
+        operation = new MultilangClumper(node, _container);
+        break;
 
       case "count":
         

@@ -362,7 +362,7 @@ public abstract class AggregationOperation extends Operation implements Processa
    * 
    */
   @Override
-  public final void cleanup() throws InterruptedException, OperationException, MultiLangException {
+  public void cleanup() throws InterruptedException, OperationException, MultiLangException {
     super.cleanup();
     this.aggregationCleanup();
   }
