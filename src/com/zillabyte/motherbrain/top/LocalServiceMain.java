@@ -181,10 +181,10 @@ public class LocalServiceMain {
           flowLogger.writeLog("RPC deployed.", OperationLogger.LogPriority.STARTUP);
 
         } catch (InterruptedException e) {
-          flowLogger.error("Interrupted!");
+          flowLogger.logError(e);
           return INTERRUPT_ERROR_RETURN_STRING;
         } catch(MotherbrainException ex) {
-          flowLogger.writeLog(ex.getInternalMessage(), OperationLogger.LogPriority.ERROR);
+          flowLogger.logError(ex);
           throw ex;
         } finally {
           /*
@@ -296,10 +296,10 @@ public class LocalServiceMain {
           // Done!
           flowLogger.writeLog("App deployed.", OperationLogger.LogPriority.STARTUP);
         } catch (InterruptedException e) {
-          flowLogger.error("Interrupted!");
+          flowLogger.logError(e);
           return INTERRUPT_ERROR_RETURN_STRING;
         } catch(MotherbrainException ex) {
-          flowLogger.writeLog(ex.getInternalMessage(), OperationLogger.LogPriority.ERROR);
+          flowLogger.logError(ex);
           throw ex;
         } finally {
           /*
@@ -323,7 +323,6 @@ public class LocalServiceMain {
     } catch (ExecutionException e) {
       log.info("execution exception");
       e.printStackTrace();
-      flowLogger.error(MotherbrainException.getRootUserMessage(e, "Internal cluster error"));
       return "{\"status\": \"error\", \"error_message\": \"execution exception\"}}";
     } finally {
       executor.shutdownNow();
