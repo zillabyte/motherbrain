@@ -51,7 +51,6 @@ import com.zillabyte.motherbrain.metrics.Metrics;
 import com.zillabyte.motherbrain.relational.DefaultStreamException;
 import com.zillabyte.motherbrain.top.MotherbrainException;
 import com.zillabyte.motherbrain.universe.Config;
-import com.zillabyte.motherbrain.universe.ExceptionHandler;
 import com.zillabyte.motherbrain.universe.S3Exception;
 import com.zillabyte.motherbrain.universe.Universe;
 import com.zillabyte.motherbrain.utils.DateHelper;
@@ -105,7 +104,6 @@ public abstract class Operation implements Serializable {
   protected ExponentialBackoffTicker _ipcLogBackoff = new ExponentialBackoffTicker(
       10000/* 100 */);
   protected transient Heartbeat _heartbeat = null;
-  protected transient ExceptionHandler _exHandler = null;
   protected transient OperationErrorStrategy _errorStrategy = null;
   protected int _loopErrors = 0;
   protected OperationSleeper _sleeper = new OperationSleeper();
@@ -378,9 +376,6 @@ public abstract class Operation implements Serializable {
     return _operationLogger;
   }
   
-  public ExceptionHandler exHandler() {
-    return _exHandler;
-  }
 
   public Heartbeat getHeartbeat() {
     return _heartbeat;
@@ -1183,8 +1178,6 @@ public abstract class Operation implements Serializable {
 
             // Prepare the logger... Tell the state store where the logger islocated..
             _operationLogger = Universe.instance().loggerFactory().logger(topFlowId(), instanceName(), getTopFlow().getFlowConfig().getAuthToken());
-            _exHandler = Universe.instance().exceptionHandler();
-            _exHandler.setLogger(_operationLogger);
 
             // Start the heartbeat
             _heartbeat = Heartbeat.create(Operation.this, _executor);
