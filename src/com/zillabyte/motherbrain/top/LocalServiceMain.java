@@ -183,9 +183,6 @@ public class LocalServiceMain {
         } catch (InterruptedException e) {
           flowLogger.logError(e);
           return INTERRUPT_ERROR_RETURN_STRING;
-        } catch(MotherbrainException ex) {
-          flowLogger.logError(ex);
-          throw ex;
         } finally {
           /*
            * Unlock if someone else didn't grab the lock.
@@ -207,9 +204,11 @@ public class LocalServiceMain {
 
     } catch (TimeoutException e) {
       log.info("flow register timeout");
+      flowLogger.logError(e);
       return "{\"status\": \"error\", \"error_message\": \"flow register timeout\"}}";
     } catch (ExecutionException e) {
       log.info("execution exception");
+      flowLogger.logError(e);
       e.printStackTrace();
       return "{\"status\": \"error\", \"error_message\": \"execution exception\"}}";
     } finally {
@@ -298,9 +297,6 @@ public class LocalServiceMain {
         } catch (InterruptedException e) {
           flowLogger.logError(e);
           return INTERRUPT_ERROR_RETURN_STRING;
-        } catch(MotherbrainException ex) {
-          flowLogger.logError(ex);
-          throw ex;
         } finally {
           /*
            * Unlock if someone else didn't grab the lock.
@@ -319,9 +315,11 @@ public class LocalServiceMain {
       return future.get(REGISTER_TIMEOUT, TimeUnit.MILLISECONDS);
     } catch (TimeoutException e) {
       log.info("flow register timeout");
+      flowLogger.logError(e);
       return "{\"status\": \"error\", \"error_message\": \"flow register timeout\"}}";
     } catch (ExecutionException e) {
       log.info("execution exception");
+      flowLogger.logError(e);
       e.printStackTrace();
       return "{\"status\": \"error\", \"error_message\": \"execution exception\"}}";
     } finally {
