@@ -85,7 +85,7 @@ public class ContainerWrapper implements Container {
   }
 
   @Override
-  public Flow maybeGetCachedFlow(String id, Integer version) throws CachedFlowException {
+  public Flow maybeGetCachedFlow(String id, Integer version) {
     return _delegate.maybeGetCachedFlow(id, version);
   }
 

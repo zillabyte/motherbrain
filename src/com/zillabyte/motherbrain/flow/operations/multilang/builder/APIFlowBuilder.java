@@ -13,7 +13,6 @@ import org.apache.log4j.Logger;
 import com.google.common.io.Files;
 import com.zillabyte.motherbrain.api.APIException;
 import com.zillabyte.motherbrain.api.APIService;
-import com.zillabyte.motherbrain.container.CachedFlowException;
 import com.zillabyte.motherbrain.container.ContainerEnvironmentHelper;
 import com.zillabyte.motherbrain.container.ContainerPathHelper;
 import com.zillabyte.motherbrain.container.ContainerWrapper;
@@ -84,12 +83,7 @@ public class APIFlowBuilder implements FlowFetcher {
       
       // Do we have a cached version of this flow?
       Flow cachedFlow  = null;
-      try {
-        cachedFlow = _container.maybeGetCachedFlow(concreteId, version);
-      } catch (CachedFlowException e) {
-        _log.warn("unable to deserialize cached flow: " + e.getMessage());
-        cachedFlow = null;
-      }
+      cachedFlow = _container.maybeGetCachedFlow(concreteId, version);
       
       if (cachedFlow != null) {
         return cachedFlow;
