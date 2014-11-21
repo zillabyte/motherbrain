@@ -105,7 +105,7 @@ public class SinkToBuffer extends Sink {
   }
 
   @Override
-  protected void process(MapTuple t) throws MotherbrainException, InterruptedException {
+  protected void process(MapTuple t) throws OperationException, InterruptedException {
     if(_producer == null)
       initProducer();
     // Sanity check:
@@ -126,8 +126,7 @@ public class SinkToBuffer extends Sink {
         if(expectField) break;
       }
       if(!expectField) {
-        _operationLogger.writeLog("Unexpected field '"+field+"' in tuple '"+t.toString()+"'. Data will not be sunk.", OperationLogger.LogPriority.ERROR);
-        return;
+        throw new OperationException(this, "Unexpected field '"+field+"' in tuple '"+t.toString()+"'. Data will not be sunk.");
       }
     }
     

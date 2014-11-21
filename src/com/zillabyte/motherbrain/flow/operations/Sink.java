@@ -39,7 +39,7 @@ public abstract class Sink extends Operation implements ProcessableOperation {
     return _columns;
   }
 
-  protected abstract void process(@NonNull MapTuple t) throws MotherbrainException, InterruptedException;
+  protected abstract void process(@NonNull MapTuple t) throws OperationException, InterruptedException;
   
 
   @Override
@@ -131,7 +131,7 @@ public abstract class Sink extends Operation implements ProcessableOperation {
       }
     } catch(InterruptedException e) {
       // Continue processing...
-    } catch (TimeoutException e) {
+    } catch (TimeoutException | OperationException e) {
       handleLoopError(e);
     } catch (MotherbrainException e) {
       handleFatalError(e);
