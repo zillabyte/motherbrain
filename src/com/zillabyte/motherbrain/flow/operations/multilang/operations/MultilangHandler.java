@@ -79,16 +79,18 @@ public class MultilangHandler implements Serializable {
       _container.start();
 
       // Do a 'prep'. TODO: remove this, and make sure all dependencies are included in the deserialization
-      _container.buildCommand()
-          .withEnvironment(ContainerEnvironmentHelper.getCLIEnvironment(this._operation.getTopFlow().getFlowConfig()))
-          .inFlowDirectory(_operation.getContainerFlow().getId())
-          .withCLICommand("prep", "--mode", Universe.instance().env().toString())
-          .withoutSockets()
-          .withEnvironment("ZILLABYTE_PARAMS", _operation.getMergedConfig().toJSON().toString())
-          .createProcess()
-          .addLogListener(_operation.logger())
-          .start()
-          .waitForExit(1000L * 45);
+      if(Universe.instance().env().isTestOrProd()) {
+        _container.buildCommand()
+        .withEnvironment(ContainerEnvironmentHelper.getCLIEnvironment(this._operation.getTopFlow().getFlowConfig()))
+        .inFlowDirectory(_operation.getContainerFlow().getId())
+        .withCLICommand("prep", "--mode", Universe.instance().env().toString())
+        .withoutSockets()
+        .withEnvironment("ZILLABYTE_PARAMS", _operation.getMergedConfig().toJSON().toString())
+        .createProcess()
+        .addLogListener(_operation.logger())
+        .start()
+        .waitForExit(1000L * 45);
+      }
 
       // Handshake
       _process = _container.buildCommand()

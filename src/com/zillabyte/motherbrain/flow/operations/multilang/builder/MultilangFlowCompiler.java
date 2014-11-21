@@ -98,7 +98,7 @@ public class MultilangFlowCompiler {
   public Flow compileFlow(String flowId, JSONObject overrideConfig) throws FlowCompilationException, ContainerException {
     
     // Step 1: run "zillabyte prep"
-    handlePrep(flowId, overrideConfig);
+    if(Universe.instance().env().isTestOrProd()) handlePrep(flowId, overrideConfig);
     
     // Step 2: run "zillabyte info" and parse the settings 
     JSONObject zbInfo = handleGettingSettings(flowId);

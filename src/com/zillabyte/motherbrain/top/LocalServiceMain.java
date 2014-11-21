@@ -149,7 +149,6 @@ public class LocalServiceMain {
           /*
            * Wait for the operations to come online...
            */
-          flowLogger.writeLog("Waiting for operations to come online: " + flowInstance.getOperationsThatAreNotAlive(), OperationLogger.LogPriority.STARTUP);
           if (!flowInstance.waitUntilAllOperationsAlive(LocalServiceMain.OPERATION_STARTING_TIMEOUT_MS, FlowState.INITIAL, FlowState.STARTING, FlowState.STARTED, FlowState.RUNNING)) {
             if (flowInstance.inState(FlowState.INITIAL, FlowState.STARTING, FlowState.STARTED, FlowState.RUNNING) == false) {
               flowLogger.writeLog("Component in unexpected state " + flowInstance.getFlowState() + ".  Aborting...", OperationLogger.LogPriority.STARTUP);
@@ -159,8 +158,7 @@ public class LocalServiceMain {
             flowInstance.transitionToState(FlowState.ERROR);
             return "{\"status\": \"error\", \"error_message\": \"operation boot timeout\"}";
           }
-          flowLogger.writeLog("Operations online.", OperationLogger.LogPriority.STARTUP);
-          flowLogger.writeLog("Beginning individual operation initialization.", OperationLogger.LogPriority.STARTUP);
+          log.info("Beginning individual operation initialization.");
           /*
            * Wait for all the operations to report they are ready to start working...
            */
@@ -265,7 +263,6 @@ public class LocalServiceMain {
           /*
            * Wait for the operations to come online...
            */
-          flowLogger.writeLog("Waiting for operations to come online: " + flowInstance.getOperationsThatAreNotAlive(), OperationLogger.LogPriority.STARTUP);
           if (!flowInstance.waitUntilAllOperationsAlive(LocalServiceMain.OPERATION_STARTING_TIMEOUT_MS, FlowState.INITIAL, FlowState.STARTING, FlowState.STARTED, FlowState.RUNNING)) {
             if (flowInstance.inState(FlowState.INITIAL, FlowState.STARTING, FlowState.STARTED, FlowState.RUNNING) == false) {
               flowLogger.writeLog("App in unexpected state " + flowInstance.getFlowState() + ".  Aborting...", OperationLogger.LogPriority.STARTUP);
@@ -275,8 +272,7 @@ public class LocalServiceMain {
             flowInstance.transitionToState(FlowState.ERROR);
             return "{\"status\": \"error\", \"error_message\": \"operation boot timeout\"}";
           }
-          flowLogger.writeLog("Operations online.", OperationLogger.LogPriority.STARTUP);
-          flowLogger.writeLog("Beginning individual operation initialization.", OperationLogger.LogPriority.STARTUP);
+          log.info("Beginning individual operation initialization.");
           /*
            * Wait for all the operations to report they are ready to start working...
            */

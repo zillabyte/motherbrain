@@ -527,10 +527,7 @@ public abstract class Operation implements Serializable {
 
   }
 
-  protected void notifyOfNewState(String newState, boolean transactional)
-      throws TimeoutException, CoordinationException {
-    _operationLogger.writeLog("Transitioning to state: " + newState,
-        OperationLogger.LogPriority.RUN);
+  protected void notifyOfNewState(String newState, boolean transactional) throws TimeoutException, CoordinationException {
     if (transactional) {
       sendTransactionalMessageToFlow("state", newState);
     } else {
@@ -1214,8 +1211,6 @@ public abstract class Operation implements Serializable {
 
                 Benchmark.markBegin("operation.prepare.pre_prepare");
                 _log.info("beginning pre-prepare stage...");
-                _operationLogger.writeLog("Beginning prepare",
-                    OperationLogger.LogPriority.STARTUP);
                 prePrepare();
 
                 _log.info("done with pre-prepare");
@@ -1322,7 +1317,7 @@ public abstract class Operation implements Serializable {
    */
   protected void handleFlowCommand(String command) throws Exception {
     if (command.equalsIgnoreCase("die")) {
-      _operationLogger.writeLog("killing ourself...(" + this.instanceName() + ")", OperationLogger.LogPriority.RUN);
+      _operationLogger.writeLog("Received command to shut down.", OperationLogger.LogPriority.RUN);
       handleCleanup();
 
     } else if (command.equalsIgnoreCase("report")) {
