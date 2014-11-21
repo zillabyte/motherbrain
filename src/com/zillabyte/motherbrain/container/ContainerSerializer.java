@@ -25,7 +25,7 @@ public interface ContainerSerializer extends Serializable {
    * @param flow
    * @throws ContainerException
    */
-  public void serializeFlow(Flow flow) throws ContainerException;
+  public void serializeFlow(Flow flow);
 
 
   /**
@@ -34,7 +34,7 @@ public interface ContainerSerializer extends Serializable {
    * @param instName
    * @throws ContainerException
    */
-  public void deserializeOperationInstance(Container con, String instName) throws ContainerException;
+  public void deserializeOperationInstance(Container con, String instName);
 
 
 

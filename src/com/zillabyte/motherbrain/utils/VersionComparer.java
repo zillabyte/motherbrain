@@ -20,7 +20,7 @@ public class VersionComparer {
     int testPatch = Integer.parseInt(testMatch.group(3));
     
     Matcher minMatch = versionPattern.matcher(minimum);
-    if (minMatch.find() == false) throw new IllegalArgumentException("you should pass in a valid 'minimum' parameter");
+    if (minMatch.find() == false) throw new RuntimeException("You should pass in a valid 'minimum' parameter.");
     int minMajor = Integer.parseInt(minMatch.group(1));
     int minMinor = Integer.parseInt(minMatch.group(2));
     int minPatch = Integer.parseInt(minMatch.group(3));

@@ -20,9 +20,9 @@ public abstract class SSHFactory implements Serializable{
    */
   private static final long serialVersionUID = 8641727369432892453L;
 
-  public abstract void runCommands(String host, List<String> commands) throws InterruptedException, SSHException;
+  public abstract void runCommands(String host, List<String> commands) throws InterruptedException;
   
-  public void runCommands(String host, String... commands) throws InterruptedException, SSHException {
+  public void runCommands(String host, String... commands) throws InterruptedException {
     runCommands(host, Arrays.asList(commands));
   }
 
@@ -36,7 +36,7 @@ public abstract class SSHFactory implements Serializable{
     private static final Local localFactory = new Local();
     
     @Override
-    public void runCommands(String host, List<String> commands) throws InterruptedException, SSHException {
+    public void runCommands(String host, List<String> commands) throws InterruptedException {
       if (Utils.getHost() == host) {
         localFactory.runCommands(host, commands);
         return;
@@ -104,7 +104,7 @@ public abstract class SSHFactory implements Serializable{
           vagrantFile.delete();
         }
       } catch(IOException e) {
-        throw new SSHException(e);
+        throw new RuntimeException(e);
       }
     }
   }
@@ -119,7 +119,7 @@ public abstract class SSHFactory implements Serializable{
     static Logger log = Logger.getLogger(SSHFactory.class);
     
     @Override
-    public void runCommands(String host, List<String> commands) throws InterruptedException, SSHException {
+    public void runCommands(String host, List<String> commands) {
       String actualCommand = "";
       for(String command : commands) {
         if(actualCommand == "") {
@@ -129,11 +129,7 @@ public abstract class SSHFactory implements Serializable{
         }
       }
       
-      try {
-        Utils.bash(actualCommand);
-      } catch (IOException e) {
-        throw new SSHException(e);
-      }
+      Utils.bash(actualCommand);
     }
   }
   
@@ -146,7 +142,7 @@ public abstract class SSHFactory implements Serializable{
     private static final long serialVersionUID = -8438946736747882279L;
 
     @Override
-    public void runCommands(String host, List<String> commands) throws InterruptedException, SSHException {
+    public void runCommands(String host, List<String> commands) {
       String keyPath = "~/zb1/.credentials/ec2_2013_01.pem";
       String fullCommand = "chmod 400 " + keyPath + "; ssh -i " + keyPath + " -oStrictHostKeyChecking=no -oConnectTimeout=60 " + host;
       String actualCommand = "";
@@ -160,11 +156,7 @@ public abstract class SSHFactory implements Serializable{
       actualCommand += "\"";
       fullCommand += actualCommand;
       
-      try {
-        Utils.bash(fullCommand);
-      } catch (IOException e) {
-        throw new SSHException(e);
-      }
+      Utils.bash(fullCommand);
     }
   }
   

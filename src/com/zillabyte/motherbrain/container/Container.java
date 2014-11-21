@@ -19,7 +19,7 @@ public interface Container extends Serializable {
   /***
    * Starts the container
    */
-  public void start() throws ContainerException;
+  public void start();
 
 
   /***
@@ -31,33 +31,33 @@ public interface Container extends Serializable {
   /***
    * Writes the byte contents to a file inside the container
    */
-  public void writeFile(String internalPath, byte[] contents) throws ContainerException;
+  public void writeFile(String internalPath, byte[] contents);
 
   /***
    * Reads the contents of an internal file 
    */
-  public byte[] readFileAsBytes(String file) throws ContainerException;
+  public byte[] readFileAsBytes(String file);
   
   
   /***
    * Creates an internal directory
    * @throws ContainerException 
    */
-  public void createDirectory(String path) throws ContainerException;
+  public void createDirectory(String path);
   
 
   /***
    * shuts down the container
    */
-  public void cleanup() throws ContainerException;
+  public void cleanup();
 
 
   public File getRoot();
-  public File getFile(String internalPath) throws ContainerException;
+  public File getFile(String internalPath);
   
   
   public void cacheFlow(Flow flow);
   
-  public Flow maybeGetCachedFlow(String id, Integer version);
+  public Flow maybeGetCachedFlow(String id, Integer version) throws CachedFlowException;
 
 }

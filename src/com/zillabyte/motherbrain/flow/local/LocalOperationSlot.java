@@ -17,7 +17,6 @@ import com.zillabyte.motherbrain.flow.collectors.coordinated.CoordinatedOutputCo
 import com.zillabyte.motherbrain.flow.collectors.coordinated.ObserveIncomingTupleAction;
 import com.zillabyte.motherbrain.flow.operations.Join;
 import com.zillabyte.motherbrain.flow.operations.Operation;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
 import com.zillabyte.motherbrain.flow.operations.ProcessableOperation;
 import com.zillabyte.motherbrain.flow.operations.Source;
 import com.zillabyte.motherbrain.utils.Utils;
@@ -41,12 +40,8 @@ public class LocalOperationSlot {
   }
   
   public void prepare() {
-    try {
-      _collector.configure(null);
-      _operation.handlePrepare(_collector);
-    } catch (OperationException | InterruptedException e) {
-      Throwables.propagate(e);
-    }
+    _collector.configure(null);
+    _operation.handlePrepare(_collector);
   }
   
   public boolean isRunning() {
@@ -57,7 +52,7 @@ public class LocalOperationSlot {
   }
   
   public void start() {
-    if (_future != null) throw new IllegalStateException("future already exists!");
+    if (_future != null) throw new RuntimeException("Future already exists!");
     _future = Utils.run(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
@@ -103,14 +98,12 @@ public class LocalOperationSlot {
                 ((ProcessableOperation)_operation).handleProcess((MapTuple) tuple, _collector);
               }
             } else {
-              throw new IllegalStateException("unexpected operation type: " + _operation);
+              throw new RuntimeException("Unexpected operation type: " + _operation);
             }
             
             _collector.onAfterTuplesEmitted(); 
             
           }
-        } catch(InterruptedException e) {
-          // Do nothing... 
         } catch(Exception e) {
           debug(ExceptionUtils.getFullStackTrace(e));
           _log.error(e.getMessage());
@@ -124,16 +117,12 @@ public class LocalOperationSlot {
   }
   
   public void stop() {
-    try {
-      _operation.cleanup();
-      if (_future != null) {
-        _future.cancel(true);
-        _future = null;
-      }
-      this._queue.clear();
-    } catch(Exception e) {
-      Throwables.propagate(e);
+    _operation.cleanup();
+    if (_future != null) {
+      _future.cancel(true);
+      _future = null;
     }
+    this._queue.clear();
   }
   
   public void enqueueTuple(Integer sourceTask, String stream, Object tuple) {

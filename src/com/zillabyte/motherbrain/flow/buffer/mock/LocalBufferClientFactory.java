@@ -6,17 +6,16 @@ import com.zillabyte.motherbrain.flow.buffer.BufferFlusher;
 import com.zillabyte.motherbrain.flow.buffer.BufferProducer;
 import com.zillabyte.motherbrain.flow.buffer.SinkToBuffer;
 import com.zillabyte.motherbrain.flow.buffer.SourceFromBuffer;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
 
 public class LocalBufferClientFactory implements BufferClientFactory {
 
   @Override
-  public BufferConsumer createConsumer(SourceFromBuffer operation) throws OperationException {
+  public BufferConsumer createConsumer(SourceFromBuffer operation) {
     return new LocalBufferConsumer(operation);
   }
 
   @Override
-  public BufferProducer createProducer(SinkToBuffer operation) throws OperationException {
+  public BufferProducer createProducer(SinkToBuffer operation) {
     return new LocalBufferProducer(operation);
   }
 

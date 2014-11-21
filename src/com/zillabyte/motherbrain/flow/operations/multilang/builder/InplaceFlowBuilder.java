@@ -7,7 +7,6 @@ import org.apache.log4j.Logger;
 import com.zillabyte.motherbrain.container.ContainerWrapper;
 import com.zillabyte.motherbrain.container.local.InplaceContainer;
 import com.zillabyte.motherbrain.flow.Flow;
-import com.zillabyte.motherbrain.flow.FlowCompilationException;
 import com.zillabyte.motherbrain.flow.config.FlowConfig;
 import com.zillabyte.motherbrain.flow.operations.OperationLogger;
 import com.zillabyte.motherbrain.utils.Utils;
@@ -54,20 +53,14 @@ public class InplaceFlowBuilder  implements FlowFetcher {
    * @throws FlowCompilationException 
    */
   @Override
-  public Flow buildFlow(String flowName, JSONObject overrideConfig) throws FlowCompilationException {
-    try {
-      
-      // Actually build the flow
-      return _flowCompiler.compileFlow(flowName, overrideConfig);
-        
-    } catch(Exception e) {
-      throw new FlowCompilationException(e);
-    }
+  public Flow buildFlow(String flowName, JSONObject overrideConfig) {
+    // Actually build the flow
+    return _flowCompiler.compileFlow(flowName, overrideConfig);
   }
 
   
   
-  public Flow buildFlow(String flowName) throws FlowCompilationException {
+  public Flow buildFlow(String flowName) {
     return buildFlow(flowName, new JSONObject());
   }
 

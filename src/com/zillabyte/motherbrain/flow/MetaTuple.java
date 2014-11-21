@@ -7,7 +7,6 @@ import java.util.List;
 import com.google.common.collect.Lists;
 import com.zillabyte.motherbrain.relational.ColumnDef;
 import com.zillabyte.motherbrain.relational.DataType;
-import com.zillabyte.motherbrain.relational.MissingFieldException;
 import com.zillabyte.motherbrain.utils.DateHelper;
 
 public final class MetaTuple implements Serializable {
@@ -139,7 +138,7 @@ public final class MetaTuple implements Serializable {
     }
   }
 
-  public void put(String name, Object object) throws MissingFieldException {
+  public void put(String name, Object object) {
     if (_sinceColumn.getName().equals(name)) {
       since = (Date) object;
     } else if (_confidenceColumn.getName().equals(name)) {
@@ -148,7 +147,7 @@ public final class MetaTuple implements Serializable {
     } else if (_sourceColumn.getName().equals(name)) { 
       source = (String) object;
     } else {
-      throw new MissingFieldException("unknown column");
+      throw new RuntimeException("unknown column");
     }
   }
 

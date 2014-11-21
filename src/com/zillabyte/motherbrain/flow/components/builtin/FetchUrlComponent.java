@@ -1,8 +1,6 @@
 package com.zillabyte.motherbrain.flow.components.builtin;
 
-import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
@@ -15,14 +13,13 @@ import com.ning.http.client.AsyncHttpClientConfig.Builder;
 import com.ning.http.client.HttpResponseBodyPart;
 import com.ning.http.client.Response;
 import com.zillabyte.motherbrain.flow.Component;
-import com.zillabyte.motherbrain.flow.FlowCompilationException;
 import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.StreamBuilder.ComponentStreamBuilder;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.components.ComponentInput;
 import com.zillabyte.motherbrain.flow.components.ComponentOutput;
 import com.zillabyte.motherbrain.flow.config.FlowConfig;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.flow.operations.builtin.Clumper;
 import com.zillabyte.motherbrain.relational.ColumnDef;
 import com.zillabyte.motherbrain.utils.MeteredLog;
@@ -61,7 +58,7 @@ public class FetchUrlComponent {
     }
 
     @Override
-    public void execute(List<MapTuple> tuples, final OutputCollector collector) throws OperationException {
+    public void execute(List<MapTuple> tuples, final OutputCollector collector) throws LoopException {
       
       if (tuples.isEmpty())
         return;
@@ -147,7 +144,7 @@ public class FetchUrlComponent {
   private static Logger _log = Utils.getLogger(FetchUrlComponent.class);
 
   
-  public static Component create(final FlowConfig config) throws FlowCompilationException {
+  public static Component create(final FlowConfig config) {
     
     Component c = new Component("fetch_url", config);
     ComponentStreamBuilder sb = c.createStream(

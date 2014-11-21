@@ -43,7 +43,7 @@ public class App extends Flow {
     return StreamBuilder.makeAppStreamBuilder(this, producer, producer.produceStream());
   }
 
-  public @NonNullByDefault void connect(Operation source, Operation dest, String name) throws FlowCompilationException{
+  public @NonNullByDefault void connect(Operation source, Operation dest, String name) {
     this.graph().connect(source, dest, name);
   }
 

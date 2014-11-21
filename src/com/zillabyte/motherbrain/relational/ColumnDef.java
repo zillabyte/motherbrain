@@ -6,8 +6,6 @@ import java.util.List;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 
-import com.zillabyte.motherbrain.flow.FlowCompilationException;
-
 
 @NonNullByDefault
 public final class ColumnDef implements Serializable {
@@ -78,7 +76,7 @@ public final class ColumnDef implements Serializable {
     return new ColumnDef(name, DataType.BOOLEAN, name);
   }
 
-  public static DataType convertStringToDataType(String type) throws FlowCompilationException {
+  public static DataType convertStringToDataType(String type) {
     if(type.equalsIgnoreCase("string")) {
       return DataType.STRING;
     } else if(type.equalsIgnoreCase("integer")) {
@@ -94,7 +92,7 @@ public final class ColumnDef implements Serializable {
     } else if(type.equalsIgnoreCase("map")) {
       return DataType.MAP;
     } else {
-      throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Unknown data type: "+type+".");
+      throw new RuntimeException("Unknown data type: "+type+".");
     }
   }
   

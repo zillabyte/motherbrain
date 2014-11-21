@@ -10,22 +10,16 @@ import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
 
 import com.zillabyte.motherbrain.container.ContainerEnvironmentHelper;
-import com.zillabyte.motherbrain.container.ContainerException;
 import com.zillabyte.motherbrain.container.ContainerWrapper;
 import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.config.OperationConfig;
 import com.zillabyte.motherbrain.flow.error.strategies.FakeLocalException;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.flow.operations.Operation;
-import com.zillabyte.motherbrain.flow.operations.OperationDeadException;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
-import com.zillabyte.motherbrain.flow.operations.OperationLogger;
 import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangCleaner;
-import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangException;
 import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangProcess;
-import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangProcessException;
 import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangProcessGeneralOperationObserver;
 import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangProcessTupleObserver;
-import com.zillabyte.motherbrain.top.MotherbrainException;
 import com.zillabyte.motherbrain.universe.Universe;
 import com.zillabyte.motherbrain.utils.Utils;
 
@@ -62,13 +56,13 @@ public class MultilangHandler implements Serializable {
     return nodeSettings.getString("name");
   }
 
-  public synchronized void prepare() throws MultiLangException {
+  public synchronized void prepare() {
     try {
 
       // Init
       _log.info("starting live run " + _operation.instanceName());
       if (_process != null)
-        throw (MultiLangException) new MultiLangException(_operation, "the process has already been initialized").setUserMessage("An error occurred while preparing the operation.").adviseRetry();
+        throw new RuntimeException("The process has already been initialized.");
 
       // Pull down the containers...
       Universe.instance().containerFactory().createSerializer().deserializeOperationInstance(_container, _operation.instanceName());
@@ -116,30 +110,25 @@ public class MultilangHandler implements Serializable {
       MultiLangCleaner.registerOperation(_process, _operation);
       _log.info("live run is running...");
 
-    } catch (MotherbrainException | InterruptedException | TimeoutException ex) {
-      _operation.logger().writeLog("Internal error while preparing operation", OperationLogger.LogPriority.ERROR);
-      throw (MultiLangException) new MultiLangException(_operation, ex).setUserMessage("An error occurred while preparing the operation.").adviseRetry();
+    } catch (LoopException | InterruptedException | TimeoutException ex) {
+      throw new RuntimeException(ex);
     }
   }
 
-  public synchronized void cleanup(boolean destroyContainer) throws MultiLangException {
-    try {
-      if (_processGeneralObserver != null) {
-        _processGeneralObserver.detach();
-      }
-      if (_process != null) {
-        _process.destroy();
-        _process = null;
-      }
-      if (destroyContainer) {
-        _container.cleanup();
-      }
-    } catch (MultiLangProcessException | ContainerException e) {
-      throw (MultiLangException) new MultiLangException(_operation, e).setUserMessage("An error occurred while cleaning up the operation. In most cases you do not need to worry about this.");
+  public synchronized void cleanup(boolean destroyContainer) {
+    if (_processGeneralObserver != null) {
+      _processGeneralObserver.detach();
+    }
+    if (_process != null) {
+      _process.destroy();
+      _process = null;
+    }
+    if (destroyContainer) {
+      _container.cleanup();
     }
   }
 
-  public void cleanup() throws MultiLangException {
+  public void cleanup() {
     cleanup(true);
   }
 
@@ -159,15 +148,11 @@ public class MultilangHandler implements Serializable {
     return this._container;
   }
 
-  public void writeMessage(String string) throws MultiLangException {
-    try {
-      _process.writeMessageWithEnd(string);
-    } catch (InterruptedException | MultiLangProcessException e) {
-      throw (MultiLangException) new MultiLangException(_operation, e).setUserMessage("An error occurred while communicating with the multilang process.").adviseRetry();
-    }
+  public void writeMessage(String string) {
+    _process.writeMessageWithEnd(string);
   }
 
-  public void waitForDoneMessageWithoutCollecting() throws OperationException, InterruptedException {
+  public void waitForDoneMessageWithoutCollecting() throws LoopException {
     this._processTupleObserver.waitForDoneMessageWithoutCollecting();
   }
 
@@ -179,15 +164,15 @@ public class MultilangHandler implements Serializable {
     _processTupleObserver.stopWatching();
   }
 
-  public void maybeThrowNextError() throws OperationException {
+  public void maybeThrowNextError() throws LoopException {
     this._processGeneralObserver.maybeThrowNextError();
   }
 
-  public Object takeNextTuple() throws OperationException, InterruptedException {
+  public Object takeNextTuple() throws LoopException {
     return _processTupleObserver.takeNextTuple();
   }
 
-  public void onFinalizeDeclare() throws OperationException, InterruptedException {
+  public void onFinalizeDeclare() {
     _knownAliases = _operation.prevNonLoopOperation().getAliases();
   }
 
@@ -199,24 +184,26 @@ public class MultilangHandler implements Serializable {
     }
   }
 
-  public void handleRestartingProcess() throws OperationException, FakeLocalException {
+  public void handleRestartingProcess() throws FakeLocalException {
     synchronized (_operation) {
       _log.error("restarting process because of timeout.");
       try {
         _operation.markBeginActivity();
         cleanup(false);
         prepare();
-      } catch (MultiLangException e1) {
-        _operation.handleFatalError(e1);
+      } catch (FakeLocalException e) {
+        e.printAndWait();
+      } catch (Exception e) {
+        _operation.handleFatalError(e);
       } finally {
         _operation.markEndActivity();
       }
     }
   }
 
-  public void ensureAlive() throws OperationDeadException {
+  public void ensureAlive() {
     if (this.isAlive() == false) {
-      throw (OperationDeadException) new OperationDeadException(this._operation, "The operation is dead.").setUserMessage("The operation died. If this was unexpected, please try re-pushing. We apologize for the inconvenience.");
+      throw new RuntimeException("The operation is dead.");
     }
   }
 

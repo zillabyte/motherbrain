@@ -12,7 +12,6 @@ import com.zillabyte.motherbrain.api.RestAPIHelper;
 import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.buffer.BufferConsumer;
 import com.zillabyte.motherbrain.flow.buffer.SourceFromBuffer;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
 import com.zillabyte.motherbrain.flow.operations.OperationLogger;
 import com.zillabyte.motherbrain.utils.Utils;
 
@@ -36,10 +35,11 @@ public class LocalBufferConsumer implements BufferConsumer, Serializable {
   
   
 
-  public LocalBufferConsumer(SourceFromBuffer sourceOperation) throws OperationException{
+  public LocalBufferConsumer(SourceFromBuffer sourceOperation) {
     _source = sourceOperation;  
     _topic = _source.rawQuery();
     String authToken = sourceOperation.getTopFlow().getFlowConfig().getAuthToken();
+    
     try {
       JSONObject job_id = RestAPIHelper.post("/relations/"+_topic+"/samples_anonymous", "", authToken);
       _source.logger().writeLog("Fetching relation data for "+_topic+". This may take a while...", OperationLogger.LogPriority.RUN);
@@ -64,8 +64,7 @@ public class LocalBufferConsumer implements BufferConsumer, Serializable {
         Utils.sleep(1000L);
       }
     } catch (APIException e) {
-      _source.logger().writeLog("API Error: "+e.getUserMessage(), OperationLogger.LogPriority.ERROR);
-      throw (OperationException) new OperationException(_source, e).setUserMessage("Failed to fetch relation data from API.").adviseRetry();
+      throw new RuntimeException(e);
     }
   }
 

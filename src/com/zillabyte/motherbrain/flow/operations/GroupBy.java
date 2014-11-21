@@ -4,7 +4,6 @@ import java.util.Iterator;
 
 import com.zillabyte.motherbrain.flow.Fields;
 import com.zillabyte.motherbrain.flow.MapTuple;
-import com.zillabyte.motherbrain.flow.aggregation.AggregationException;
 import com.zillabyte.motherbrain.flow.aggregation.AggregationKey;
 import com.zillabyte.motherbrain.flow.aggregation.AggregationStoreWrapper;
 import com.zillabyte.motherbrain.flow.aggregation.Aggregator;
@@ -12,7 +11,6 @@ import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.collectors.coordinated.CoordinatedOutputCollector;
 import com.zillabyte.motherbrain.flow.config.OperationConfig;
 import com.zillabyte.motherbrain.flow.error.strategies.FakeLocalException;
-import com.zillabyte.motherbrain.top.MotherbrainException;
 import com.zillabyte.motherbrain.universe.Universe;
 import com.zillabyte.motherbrain.utils.Log4jWrapper;
 import com.zillabyte.motherbrain.utils.SerializableMonitor;
@@ -66,13 +64,9 @@ public class GroupBy extends AggregationOperation {
    * 
    */
   @Override
-  public void handleEmit(Object batchId, Integer aggKeyStore) throws InterruptedException, OperationException, OperationDeadException {
-    try {
-      // Start Aggregating
-      aggrgateAllGroups(batchId, aggKeyStore, _collector);
-    } catch (AggregationException e) {
-      throw new OperationException(this, e);
-    }
+  public void handleEmit(Object batchId, Integer aggKeyStore) throws LoopException {
+    // Start Aggregating
+    aggrgateAllGroups(batchId, aggKeyStore, _collector);
   }
   
   
@@ -83,11 +77,11 @@ public class GroupBy extends AggregationOperation {
    * @param key
    * @param c
    * @throws InterruptedException 
-   * @throws OperationException 
+   * @throws LoopException 
    * @throws OperationDeadException 
    * @throws AggregationException 
    */
-  private void aggregateGroup(Object batch, Integer aggKeyStore, AggregationKey key, OutputCollector c) throws InterruptedException, OperationException, OperationDeadException, AggregationException {
+  private void aggregateGroup(Object batch, Integer aggKeyStore, AggregationKey key, OutputCollector c) throws LoopException {
     try {
       // Don't allow multiple aggregations happen on the same thread at the same time. 
       synchronized(_aggGroupMutex) {
@@ -135,15 +129,10 @@ public class GroupBy extends AggregationOperation {
             _aggregator.complete(c);
           }
           
-        } catch (MotherbrainException ex) {
+        } catch (LoopException ex) {
           handleLoopError(ex);
-          
-        } catch (InterruptedException ex) {
-          throw ex;
-          
-        } catch(Throwable e) {
-          handleFatalError(e);
-          
+        } catch(Exception e) {
+          handleFatalError(e);          
         } finally {
           // Tell the store we can release its state
           markEndActivity();
@@ -159,11 +148,11 @@ public class GroupBy extends AggregationOperation {
    * 
    * @param c
    * @throws InterruptedException 
-   * @throws OperationException 
+   * @throws LoopException 
    * @throws OperationDeadException 
    * @throws AggregationException 
    */
-  private void aggrgateAllGroups(Object batchId, Integer aggStoreKey, OutputCollector c) throws InterruptedException, OperationException, OperationDeadException, AggregationException {
+  private void aggrgateAllGroups(Object batchId, Integer aggStoreKey, OutputCollector c) throws LoopException {
     
     // Init
     final Iterator<AggregationKey> iter;
@@ -192,7 +181,7 @@ public class GroupBy extends AggregationOperation {
    * 
    */
   @Override
-  public void handleConsume(Object batch, MapTuple t, String sourceStream, OutputCollector c) throws AggregationException {
+  public void handleConsume(Object batch, MapTuple t, String sourceStream, OutputCollector c) throws LoopException {
     _store.addToGroup(storeKeyPrefix(batch), this.getKey(this.getIncomingRouteByFields(), t), t);
   }
 

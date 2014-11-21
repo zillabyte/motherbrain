@@ -15,7 +15,7 @@ public class ProcessTimeoutException extends MotherbrainException {
 
 
 
-  public ProcessTimeoutException() {
-    // TODO Auto-generated constructor stub
+  public ProcessTimeoutException(String message) {
+    super(message);
   }
 }

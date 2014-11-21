@@ -6,8 +6,8 @@ import java.util.concurrent.TimeoutException;
 
 public interface CoordinationService extends Serializable {
   
-  public void initialize() throws CoordinationException;
-  public void shutdown() throws CoordinationException;
+  public void initialize();
+  public void shutdown();
   
   
   /***
@@ -17,7 +17,7 @@ public interface CoordinationService extends Serializable {
    * @return
    * @throws CoordinationException
    */
-  public <T> T getState(String key, T defaultState) throws CoordinationException;
+  public <T> T getState(String key, T defaultState);
   
   /***
    * Sets the value associated with this key
@@ -25,7 +25,7 @@ public interface CoordinationService extends Serializable {
    * @param value
    * @throws CoordinationException
    */
-  public <T> void setState(String key, T value) throws CoordinationException;
+  public <T> void setState(String key, T value);
   
   /**
    * Return true if the specified key exists
@@ -33,20 +33,20 @@ public interface CoordinationService extends Serializable {
    * @return
    * @throws CoordinationException
    */
-  public boolean hasState(String key) throws CoordinationException;
+  public boolean hasState(String key);
   
   /**
    * Clears all state beginning with key
    * @param key
    * @throws CoordinationException
    */
-  public void removeStateWithPrefix(String key) throws CoordinationException;
+  public void removeStateWithPrefix(String key);
   
   /***
    * Clears all state AND locks AND watchers
    * @throws CoordinationException
    */
-  public void clear() throws CoordinationException;
+  public void clear();
   
   
   
@@ -65,7 +65,7 @@ public interface CoordinationService extends Serializable {
    * @throws CoordinationException
    * @throws TimeoutException 
    */
-  public Lock lock(String lockPath, long timeout, long duration) throws CoordinationException, TimeoutException;
+  public Lock lock(String lockPath, long timeout, long duration);
   
   
   /***
@@ -81,7 +81,7 @@ public interface CoordinationService extends Serializable {
    * @param message
    * @throws CoordinationException
    */
-  public void sendMessage(String channel, Object message) throws CoordinationException;
+  public void sendMessage(String channel, Object message);
   
   /***
    * Sends a message with the added gurantee that it has been acknowledged by the remote host. 
@@ -93,7 +93,7 @@ public interface CoordinationService extends Serializable {
    * @throws CoordinationException 
    * @throws TimeoutException
    */
-  public void sendTransactionalMessage(ExecutorService exec, String channel, Object message, long timeout) throws CoordinationException, TimeoutException;
+  public void sendTransactionalMessage(ExecutorService exec, String channel, Object message, long timeout);
   
   
   /***
@@ -105,7 +105,7 @@ public interface CoordinationService extends Serializable {
    * @throws CoordinationException
    * @throws TimeoutException
    */
-  public Object ask(ExecutorService exec, String channel, Object message, long timeout) throws CoordinationException, TimeoutException;
+  public Object ask(ExecutorService exec, String channel, Object message, long timeout);
   
   
   
@@ -117,7 +117,7 @@ public interface CoordinationService extends Serializable {
    * @return
    * @throws CoordinationException
    */
-  public Watcher watchForMessage(ExecutorService exec, String channel, MessageHandler messageHandler) throws CoordinationException;
+  public Watcher watchForMessage(ExecutorService exec, String channel, MessageHandler messageHandler);
   
   
   /***
@@ -130,6 +130,6 @@ public interface CoordinationService extends Serializable {
    * @return
    * @throws CoordinationException
    */
-  public Watcher watchForAsk(ExecutorService exec, String channel, AskHandler askHandler) throws CoordinationException;
+  public Watcher watchForAsk(ExecutorService exec, String channel, AskHandler askHandler);
   
 }

@@ -15,7 +15,6 @@ import com.zillabyte.motherbrain.flow.config.FlowConfig;
 import com.zillabyte.motherbrain.flow.graph.FlowGraph;
 import com.zillabyte.motherbrain.flow.operations.Operation;
 import com.zillabyte.motherbrain.flow.operations.OperationLogger;
-import com.zillabyte.motherbrain.relational.DefaultStreamException;
 import com.zillabyte.motherbrain.universe.Config;
 
 public abstract class Flow implements Serializable {
@@ -90,7 +89,7 @@ public abstract class Flow implements Serializable {
  
 
 
-  public abstract @NonNullByDefault StreamBuilder createStream(ComponentOutput producer) throws DefaultStreamException;
+  public abstract @NonNullByDefault StreamBuilder createStream(ComponentOutput producer);
 
   public boolean isCoordinated() {
     return _isCoordinated || Config.getOrDefault("storm.coordinated", Boolean.TRUE).booleanValue();

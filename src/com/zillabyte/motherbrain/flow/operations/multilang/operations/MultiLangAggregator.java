@@ -8,9 +8,7 @@ import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.aggregation.Aggregator;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.operations.GroupBy;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
-import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangException;
-import com.zillabyte.motherbrain.top.MotherbrainException;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 
 public class MultiLangAggregator extends GroupBy implements Aggregator, MultiLangOperation {
 
@@ -30,19 +28,19 @@ public class MultiLangAggregator extends GroupBy implements Aggregator, MultiLan
   
   
   @Override
-  public void prepare() throws MultiLangException, InterruptedException {
+  public void prepare() {
     _handler.prepare();
   }
   
 
   @Override
-  protected final void aggregationCleanup() throws MultiLangException, InterruptedException {
+  protected final void aggregationCleanup() {
     _handler.cleanup();
   }
   
   
   @Override
-  public void start(MapTuple t) throws MotherbrainException, InterruptedException {
+  public void start(MapTuple t) throws LoopException {
     
     // send command begin_group
     _handler.ensureAlive();
@@ -55,7 +53,7 @@ public class MultiLangAggregator extends GroupBy implements Aggregator, MultiLan
 
   
   @Override
-  public void aggregate(MapTuple t, OutputCollector collector) throws MotherbrainException, InterruptedException {
+  public void aggregate(MapTuple t, OutputCollector collector) throws LoopException {
     
     _handler.ensureAlive();
     _handler.addAliases(t);
@@ -67,7 +65,7 @@ public class MultiLangAggregator extends GroupBy implements Aggregator, MultiLan
 
   
   @Override
-  public void complete(OutputCollector c) throws MotherbrainException, InterruptedException {
+  public void complete(OutputCollector c) throws LoopException {
 
     //send command end_group
     _handler.generalObserver().sendEndGroup();
@@ -91,7 +89,7 @@ public class MultiLangAggregator extends GroupBy implements Aggregator, MultiLan
 
   
   @Override
-  public void onFinalizeDeclare() throws OperationException, InterruptedException {
+  public void onFinalizeDeclare() {
     super.onFinalizeDeclare();
     _handler.onFinalizeDeclare();
   }

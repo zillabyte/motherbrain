@@ -18,13 +18,11 @@ import com.google.common.collect.Multiset;
 import com.google.monitoring.runtime.instrumentation.common.com.google.common.collect.Iterators;
 import com.zillabyte.motherbrain.benchmarking.Benchmark;
 import com.zillabyte.motherbrain.container.ContainerEnvironmentHelper;
-import com.zillabyte.motherbrain.container.ContainerException;
 import com.zillabyte.motherbrain.container.ContainerFactory;
 import com.zillabyte.motherbrain.container.ContainerWrapper;
 import com.zillabyte.motherbrain.flow.App;
 import com.zillabyte.motherbrain.flow.Component;
 import com.zillabyte.motherbrain.flow.Flow;
-import com.zillabyte.motherbrain.flow.FlowCompilationException;
 import com.zillabyte.motherbrain.flow.buffer.SinkToBuffer;
 import com.zillabyte.motherbrain.flow.buffer.SourceFromBuffer;
 import com.zillabyte.motherbrain.flow.components.ComponentInput;
@@ -44,7 +42,6 @@ import com.zillabyte.motherbrain.flow.operations.decorators.RemoveFields;
 import com.zillabyte.motherbrain.flow.operations.decorators.RenameFields;
 import com.zillabyte.motherbrain.flow.operations.decorators.RetainFields;
 import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangProcess;
-import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangProcessException;
 import com.zillabyte.motherbrain.flow.operations.multilang.operations.LocalComponent;
 import com.zillabyte.motherbrain.flow.operations.multilang.operations.MultiLangAggregator;
 import com.zillabyte.motherbrain.flow.operations.multilang.operations.MultiLangRunEach;
@@ -95,7 +92,7 @@ public class MultilangFlowCompiler {
    * @throws FlowCompilationException
    * @throws ContainerException
    */
-  public Flow compileFlow(String flowId, JSONObject overrideConfig) throws FlowCompilationException, ContainerException {
+  public Flow compileFlow(String flowId, JSONObject overrideConfig) {
     
     // Step 1: run "zillabyte prep"
     handlePrep(flowId, overrideConfig);
@@ -103,7 +100,7 @@ public class MultilangFlowCompiler {
     // Step 2: run "zillabyte info" and parse the settings 
     JSONObject zbInfo = handleGettingSettings(flowId);
     if (zbInfo == null) {
-      throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Unable to retrieve 'zillabyte info' response.").adviseRetry();
+      throw new RuntimeException("Unable to retrieve 'zillabyte info' response.");
     }
     
     // Step 3: Build a flow from the settings... 
@@ -125,7 +122,7 @@ public class MultilangFlowCompiler {
    * @return
    * @throws FlowCompilationException 
    */
-  protected Flow buildFlowFromSettings(String flowId, JSONObject zbInfo, JSONObject overrideConfig) throws FlowCompilationException {
+  protected Flow buildFlowFromSettings(String flowId, JSONObject zbInfo, JSONObject overrideConfig) {
     
     // Init
     String flowType = zbInfo.optString("flow_type", "app");
@@ -181,15 +178,15 @@ public class MultilangFlowCompiler {
       
       // Sanity 
       if (originName == null || operationMap.containsKey(originName) == false) 
-        throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Could not find operation with name: '" + originName + "'");
+        throw new RuntimeException("Could not find operation with name: '" + originName + "'");
       if (destName == null || operationMap.containsKey(destName) == false) 
-        throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Could not find operation with name: '" + destName + "'");
+        throw new RuntimeException("Could not find operation with name: '" + destName + "'");
       if (arcName == null)
-        throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Connection did not have a name: '" + arc + "'");
+        throw new RuntimeException("Connection did not have a name: '" + arc + "'");
       if (loopBack) {
         Object loopBackNode = operationMap.get(destName);
         if(loopBackNode instanceof Operation) {
-          if( ((Operation) loopBackNode).type().equalsIgnoreCase("source") ) throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Cannot loop back to a source");
+          if( ((Operation) loopBackNode).type().equalsIgnoreCase("source") ) throw new RuntimeException("Cannot loop back to a source");
         }
       }
       
@@ -261,12 +258,12 @@ public class MultilangFlowCompiler {
    * @param zbInfo
    * @throws FlowCompilationException
    */
-  private void handleEarlySanityChecks(JSONObject zbInfo) throws FlowCompilationException {
+  private void handleEarlySanityChecks(JSONObject zbInfo) {
     
     // Multilang version...  
     String multilangVersion = zbInfo.optString("multilang_version", "0.0.0");
     if (VersionComparer.isAtLeast(multilangVersion, MINIMUM_REQUIRED_VERSION) == false) {
-      throw (FlowCompilationException) new FlowCompilationException().setAllMessages("The flow is built with an older version of Zillabyte (" + multilangVersion + ") . Please upgrade dependencies.");
+      throw new RuntimeException("The flow is built with an older version of Zillabyte (" + multilangVersion + ") . Please upgrade dependencies.");
     }
     
   }
@@ -278,13 +275,13 @@ public class MultilangFlowCompiler {
    * @param flow
    * @throws FlowCompilationException 
    */
-  private void setParallelism(Flow flow) throws FlowCompilationException {
+  private void setParallelism(Flow flow) {
 
     final int actualNodes = flow.getExpectedNumberOfNodes();
     _log.info("There are " + actualNodes + " nodes expected for this flow. (" + flow.getId() + ")");
     
     if (actualNodes == 0) {
-      throw (FlowCompilationException) new FlowCompilationException().setAllMessages("The flow has no nodes");
+      throw new RuntimeException("The flow has no nodes");
     }
     
     // Each operation must have parallelism of at least 1.
@@ -310,7 +307,7 @@ public class MultilangFlowCompiler {
    * @param flowGraph
    * @throws FlowCompilationException
    */
-  protected void handleConnectingNodes(Object origin, Object dest, String arcName, Boolean loopBack, Integer maxIter, FlowGraph flowGraph) throws FlowCompilationException {
+  protected void handleConnectingNodes(Object origin, Object dest, String arcName, Boolean loopBack, Integer maxIter, FlowGraph flowGraph) {
     
     if (origin instanceof Operation && dest instanceof Operation) {
       
@@ -346,14 +343,14 @@ public class MultilangFlowCompiler {
       
     } else {
       
-      throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Unknown graph case. The origin is a "+origin.getClass().getName()+" while the destination is a "+dest.getClass().getName()+".");
+      throw new RuntimeException("Unknown graph case. The origin is a "+origin.getClass().getName()+" while the destination is a "+dest.getClass().getName()+".");
       
     }
   }
 
   
   
-  private void maybeInjectComponent(FlowGraph flowGraph, Component c) throws FlowCompilationException {
+  private void maybeInjectComponent(FlowGraph flowGraph, Component c) {
     
     // Only inject if it hasn't already been done above (this handles the source-from-component case)
     if (flowGraph.containsAny(c.graph().allOperations()) == false) {
@@ -388,7 +385,7 @@ public class MultilangFlowCompiler {
    * @throws FlowCompilationException 
    * @throws ContainerException 
    */
-  protected JSONObject handleGettingSettings(final String flowId) throws FlowCompilationException, ContainerException {
+  protected JSONObject handleGettingSettings(final String flowId) {
 
     // INIT 
     Benchmark.markBegin("multilang.container.zillabyte_info");
@@ -399,40 +396,26 @@ public class MultilangFlowCompiler {
       return Utils.retry(new Callable<JSONObject>() {
         
         @Override
-        public JSONObject call() throws Exception {
-          try { 
-              
-            // Execute the command...
-            MultiLangProcess proc = _container.buildCommand()
-                .withEnvironment(ContainerEnvironmentHelper.getCLIEnvironment(_flowConfig))
-                .withCLICommand("info")
-                .withSockets()
-                .inFlowDirectory(flowId)
-                .createProcess()
-                .addLogListener(_logger)
-                .addStdioLogListeners()
-                .start();
-            
-            String message = proc.getNextMessage(CLI_INFO_TIMEOUT);
-            proc.waitForExit(CLI_INFO_TIMEOUT);
-            
-            // Parse the results, finish.. 
-            return JSONUtil.parseObj(message);
-            
-          } catch (TimeoutException ex) {
-            throw (FlowCompilationException)new FlowCompilationException(ex).setAllMessages("Timeout retrieving flow meta information.").adviseRetry();
-          } catch (ContainerException e) {
-            throw (FlowCompilationException)new FlowCompilationException(e).setAllMessages("Error initializing flow container.").adviseRetry();
-          } catch (InterruptedException e) {
-            throw (FlowCompilationException)new FlowCompilationException(e).setAllMessages("Flow compilation interrupted.").adviseRetry();
-          } catch (MultiLangProcessException e) {
-            throw new FlowCompilationException(e);
-          }
+        public JSONObject call() throws InterruptedException, TimeoutException {
+          // Execute the command...
+          MultiLangProcess proc = _container.buildCommand()
+              .withEnvironment(ContainerEnvironmentHelper.getCLIEnvironment(_flowConfig))
+              .withCLICommand("info")
+              .withSockets()
+              .inFlowDirectory(flowId)
+              .createProcess()
+              .addLogListener(_logger)
+              .addStdioLogListeners()
+              .start();
+
+          String message = proc.getNextMessage(CLI_INFO_TIMEOUT);
+          proc.waitForExit(CLI_INFO_TIMEOUT);
+
+          // Parse the results, finish.. 
+          return JSONUtil.parseObj(message);
         }
       });
       
-    } catch(Exception e) {
-      throw new FlowCompilationException(e);
     } finally {
       Benchmark.markEnd("multilang.container.zillabyte_info");
     }
@@ -447,7 +430,7 @@ public class MultilangFlowCompiler {
    * @param flowConfig
    * @throws FlowCompilationException 
    */
-  protected void handlePrep(String flowId, Map<String, Object> overrideConfig) throws FlowCompilationException {
+  protected void handlePrep(String flowId, Map<String, Object> overrideConfig) {
     try { 
       
       // Benchmark
@@ -466,9 +449,7 @@ public class MultilangFlowCompiler {
           .waitForExit();
           
     } catch (InterruptedException e) {
-      throw (FlowCompilationException)new FlowCompilationException(e).setUserMessage("Interrupted");
-    } catch (ContainerException | MultiLangProcessException e) {
-      throw (FlowCompilationException)new FlowCompilationException(e).setUserMessage("Error with app container");
+      throw new RuntimeException(e);
     } finally {
       Benchmark.markEnd("multilang.container.zillabyte_prep");
     }
@@ -487,145 +468,139 @@ public class MultilangFlowCompiler {
    * @return
    * @throws FlowCompilationException 
    */
-  protected Object createOperationFromJSON(String flowId, JSONObject node) throws FlowCompilationException {
-    try { 
-       
-      // INIT 
-      String nodeType = node.getString("type").toLowerCase();
-      Operation operation;
-  
-      // Build the operation
-      switch(nodeType) {
-      case "source":
-        
-        if (node.containsKey("relation") || node.containsKey("matches")) {
-          // SourceFromRelation has 'relation' or 'matches' 
-          String query = node.containsKey("relation") ? node.getJSONObject("relation").getString("query") : node.getString("matches");
+  protected Object createOperationFromJSON(String flowId, JSONObject node) {
 
-          // The one true source.
-          return new SourceFromBuffer(node.getString("name"), query, flowId, this._flowConfig.getAuthToken());
-          
-        } else {        
-          // Custom sources don't have a query.. 
-          operation = new MultiLangRunSource(node, _container);
-        }
-        break;
-        
-      case "each":
-      case "filter":
-        
-        operation = new MultiLangRunEach(node, _container);
-        break;
+    // INIT 
+    String nodeType = node.getString("type").toLowerCase();
+    Operation operation;
 
-      case "group_by":
-        
-        operation = new MultiLangAggregator(node, _container);
-        break;
+    // Build the operation
+    switch(nodeType) {
+    case "source":
 
-      case "rename": 
-        
-        operation = new PlaceHolderOperation(new RenameFields(node));
-        break;
+      if (node.containsKey("relation") || node.containsKey("matches")) {
+        // SourceFromRelation has 'relation' or 'matches' 
+        String query = node.containsKey("relation") ? node.getJSONObject("relation").getString("query") : node.getString("matches");
 
-      case "retain": 
-        
-        operation = new PlaceHolderOperation(new RetainFields(node));
-        break;
+        // The one true source.
+        return new SourceFromBuffer(node.getString("name"), query, flowId, this._flowConfig.getAuthToken());
 
-      case "remove":
-        
-        operation = new PlaceHolderOperation(new RemoveFields(node));
-        break;
+      } else {        
+        // Custom sources don't have a query.. 
+        operation = new MultiLangRunSource(node, _container);
+      }
+      break;
 
-      case "unique":
-        
-        operation = new Unique(node);
-        break;
+    case "each":
+    case "filter":
 
-      case "clump":
-        throw new NotImplementedException();
+      operation = new MultiLangRunEach(node, _container);
+      break;
 
-      case "count":
-        
-        operation = new Count(node);
-        break;
+    case "group_by":
 
-      case "join":
-        
-        operation = new Join(node);
-        break;
+      operation = new MultiLangAggregator(node, _container);
+      break;
 
-      case "component":
-        
+    case "rename": 
 
-        if(Universe.instance().env().isLocal()) {
-          // TODO: move this logic to InPlaceFlowBuilder
-          if (BuiltinComponents.exists(node.optString("id", ""))) {
-            return BuiltinComponents.create(node.optString("id"), FlowConfig.createFromJSON(node.getJSONObject("config")));
-          } else {
-            return new LocalComponent(node);
-          }
+      operation = new PlaceHolderOperation(new RenameFields(node));
+      break;
+
+    case "retain": 
+
+      operation = new PlaceHolderOperation(new RetainFields(node));
+      break;
+
+    case "remove":
+
+      operation = new PlaceHolderOperation(new RemoveFields(node));
+      break;
+
+    case "unique":
+
+      operation = new Unique(node);
+      break;
+
+    case "clump":
+      throw new NotImplementedException();
+
+    case "count":
+
+      operation = new Count(node);
+      break;
+
+    case "join":
+
+      operation = new Join(node);
+      break;
+
+    case "component":
+
+
+      if(Universe.instance().env().isLocal()) {
+        // TODO: move this logic to InPlaceFlowBuilder
+        if (BuiltinComponents.exists(node.optString("id", ""))) {
+          return BuiltinComponents.create(node.optString("id"), FlowConfig.createFromJSON(node.getJSONObject("config")));
         } else {
-          
-          // Recursively build a new flow... 
-          String compName = node.getString("id");
-          JSONObject config = new JSONObject();
-          if (node.has("config")) {
-            config = node.optJSONObject("config");
-          }
-
-          _log.info("recursively building flow: " + compName + " with config: " + config);
-          Flow subFlow = _fetcher.buildFlow(compName, config);
-          if (subFlow instanceof App) 
-            throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Only components may be nested.");
-          
-          return subFlow;
+          return new LocalComponent(node);
         }
-        
-      case "sink":
-        
-        operation = new SinkToBuffer(node, _flowConfig);
-        break;
-        
-      case "input":
-              
-        operation = new ComponentInput(node, _flowConfig);
-        break;
+      } else {
 
-      case "output":
-        
-        operation = new ComponentOutput(node, _flowConfig);
-        break;
+        // Recursively build a new flow... 
+        String compName = node.getString("id");
+        JSONObject config = new JSONObject();
+        if (node.has("config")) {
+          config = node.optJSONObject("config");
+        }
 
-      case "route_by":
-        
-        operation = new PlaceHolderOperation(new RouteBy(node));
-        break;
+        _log.info("recursively building flow: " + compName + " with config: " + config);
+        Flow subFlow = _fetcher.buildFlow(compName, config);
+        if (subFlow instanceof App) 
+          throw new RuntimeException("Only components may be nested.");
 
-      case "rate_limit":
-        
-        operation = new RateLimiter(node);
-        break;
-
-        
-      default: 
-        throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Unknown operation type: " + nodeType+".");
-      
+        return subFlow;
       }
 
-      // Set Target Parallelism
-      if (node.containsKey("parallelism")){
-        operation.setTargetParallelism(node.getInt("parallelism"));
-        operation.setParallelismOverriden(true);
-      }
-      
-      return operation;
-      
-    
-    } catch(ContainerException | InterruptedException e) {
-      throw new FlowCompilationException(e);
+    case "sink":
+
+      operation = new SinkToBuffer(node, _flowConfig);
+      break;
+
+    case "input":
+
+      operation = new ComponentInput(node, _flowConfig);
+      break;
+
+    case "output":
+
+      operation = new ComponentOutput(node, _flowConfig);
+      break;
+
+    case "route_by":
+
+      operation = new PlaceHolderOperation(new RouteBy(node));
+      break;
+
+    case "rate_limit":
+
+      operation = new RateLimiter(node);
+      break;
+
+
+    default: 
+      throw new RuntimeException("Unknown operation type: " + nodeType+".");
+
     }
+
+    // Set Target Parallelism
+    if (node.containsKey("parallelism")){
+      operation.setTargetParallelism(node.getInt("parallelism"));
+      operation.setParallelismOverriden(true);
+    }
+
+    return operation;
   }
-  
-  
+
+
 }

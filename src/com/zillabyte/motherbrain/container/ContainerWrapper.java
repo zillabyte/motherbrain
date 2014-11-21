@@ -20,7 +20,7 @@ public class ContainerWrapper implements Container {
   
   private Container _delegate;
   
-  public void start() throws ContainerException {
+  public void start() {
     _delegate.start();
   }
 
@@ -29,35 +29,35 @@ public class ContainerWrapper implements Container {
   }
 
 
-  public File getFlowRoot(String flowId) throws ContainerException {
+  public File getFlowRoot(String flowId) {
     return getFile(ContainerPathHelper.internalPathForFlow(flowId));
   }
   
-  public void writeFile(String internalPath, byte[] contents) throws ContainerException {
+  public void writeFile(String internalPath, byte[] contents) {
     _delegate.writeFile(internalPath, contents);
   }
   
-  public void writeFile(String internalPath, String contents) throws ContainerException {
+  public void writeFile(String internalPath, String contents) {
     _delegate.writeFile(internalPath, StringUtils.getBytesUtf8(contents));
   }
   
-  public void writeFileInFlowDirectory(String flowId, String name, String contents) throws ContainerException {
+  public void writeFileInFlowDirectory(String flowId, String name, String contents) {
     String internalPath = ContainerPathHelper.internalPathForFlow(flowId) + "/" + name;
     _delegate.writeFile(internalPath, StringUtils.getBytesUtf8(contents));
   }
   
 
-  public byte[] readFileAsBytes(String file) throws ContainerException {
+  public byte[] readFileAsBytes(String file) {
     return _delegate.readFileAsBytes(file);
   }
   
-  public String readFileAsString(String file) throws ContainerException {
+  public String readFileAsString(String file) {
     return StringUtils.newStringUtf8(_delegate.readFileAsBytes(file));
   }
   
   
 
-  public void cleanup() throws ContainerException {
+  public void cleanup() {
     _delegate.cleanup();
   }
 
@@ -70,7 +70,7 @@ public class ContainerWrapper implements Container {
   }
 
   @Override
-  public void createDirectory(String path) throws ContainerException {
+  public void createDirectory(String path) {
     _delegate.createDirectory(path);
   }
 
@@ -85,12 +85,12 @@ public class ContainerWrapper implements Container {
   }
 
   @Override
-  public Flow maybeGetCachedFlow(String id, Integer version) {
+  public Flow maybeGetCachedFlow(String id, Integer version) throws CachedFlowException {
     return _delegate.maybeGetCachedFlow(id, version);
   }
 
   @Override
-  public File getFile(String internalPath) throws ContainerException {
+  public File getFile(String internalPath) {
     return _delegate.getFile(internalPath);
   }
   

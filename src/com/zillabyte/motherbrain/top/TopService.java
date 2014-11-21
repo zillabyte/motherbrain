@@ -4,12 +4,9 @@ import java.sql.SQLException;
 
 import org.eclipse.jdt.annotation.NonNull;
 
-import com.zillabyte.motherbrain.api.APIException;
 import com.zillabyte.motherbrain.flow.App;
 import com.zillabyte.motherbrain.flow.Component;
-import com.zillabyte.motherbrain.flow.FlowCompilationException;
 import com.zillabyte.motherbrain.flow.FlowInstance;
-import com.zillabyte.motherbrain.utils.JarCompilationException;
 
 
 /****
@@ -29,7 +26,7 @@ public interface TopService {
    * @throws FlowCompilationException 
    * @throws Exception 
    */
-  @NonNull FlowInstance registerApp(App app) throws InterruptedException, FlowCompilationException, Exception;
+  @NonNull FlowInstance registerApp(App app);
 
   
   /***
@@ -38,7 +35,7 @@ public interface TopService {
    * @throws JarCompilationException 
    * @throws SQLException 
    */
-  void init() throws InterruptedException, JarCompilationException, SQLException;
+  void init();
 
   
   /***
@@ -48,7 +45,7 @@ public interface TopService {
 
 
   // Register a component for later splicing
-  void registerComponent(Component comp) throws InterruptedException, FlowCompilationException, APIException;
+  void registerComponent(Component comp);
 
   
 //  /**

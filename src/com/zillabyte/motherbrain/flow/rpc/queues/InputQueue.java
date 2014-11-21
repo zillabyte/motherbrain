@@ -4,16 +4,15 @@ import java.io.Serializable;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 
-import com.zillabyte.motherbrain.flow.operations.OperationException;
 import com.zillabyte.motherbrain.flow.rpc.RPCRequest;
 
 @NonNullByDefault
 public interface InputQueue extends Serializable {
 
-  public RPCRequest getNextRequest() throws InterruptedException;
+  public RPCRequest getNextRequest();
   public boolean nextRequestAvailable();
   
-  public void init() throws OperationException;
+  public void init();
   public void shutdown();
   
 }

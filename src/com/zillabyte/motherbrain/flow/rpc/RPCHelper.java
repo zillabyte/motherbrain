@@ -3,11 +3,10 @@ package com.zillabyte.motherbrain.flow.rpc;
 import com.zillabyte.motherbrain.flow.App;
 import com.zillabyte.motherbrain.flow.Component;
 import com.zillabyte.motherbrain.flow.Flow;
-import com.zillabyte.motherbrain.flow.FlowCompilationException;
 
 public class RPCHelper {
 
-  public static App wrapComponentInRpcApp(Component comp) throws FlowCompilationException {
+  public static App wrapComponentInRpcApp(Component comp) {
     
     // Init 
     App app = new App(comp.getId(), comp.getName() + "_rpc");

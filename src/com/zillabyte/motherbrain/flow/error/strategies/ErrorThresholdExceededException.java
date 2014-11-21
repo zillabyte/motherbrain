@@ -1,9 +1,9 @@
 package com.zillabyte.motherbrain.flow.error.strategies;
 
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.flow.operations.Operation;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
 
-public class ErrorThresholdExceededException extends OperationException {
+public class ErrorThresholdExceededException extends LoopException {
 
 
   private static final long serialVersionUID = 3215975692168353056L;

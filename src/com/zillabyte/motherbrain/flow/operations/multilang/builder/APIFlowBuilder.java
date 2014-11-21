@@ -1,7 +1,6 @@
 package com.zillabyte.motherbrain.flow.operations.multilang.builder;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeoutException;
@@ -14,17 +13,14 @@ import org.apache.log4j.Logger;
 import com.google.common.io.Files;
 import com.zillabyte.motherbrain.api.APIException;
 import com.zillabyte.motherbrain.api.APIService;
+import com.zillabyte.motherbrain.container.CachedFlowException;
 import com.zillabyte.motherbrain.container.ContainerEnvironmentHelper;
-import com.zillabyte.motherbrain.container.ContainerException;
 import com.zillabyte.motherbrain.container.ContainerPathHelper;
 import com.zillabyte.motherbrain.container.ContainerWrapper;
 import com.zillabyte.motherbrain.flow.Flow;
-import com.zillabyte.motherbrain.flow.FlowCompilationException;
 import com.zillabyte.motherbrain.flow.components.builtin.BuiltinComponents;
 import com.zillabyte.motherbrain.flow.config.FlowConfig;
 import com.zillabyte.motherbrain.flow.operations.OperationLogger;
-import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangProcessException;
-import com.zillabyte.motherbrain.universe.S3Exception;
 import com.zillabyte.motherbrain.universe.Universe;
 import com.zillabyte.motherbrain.utils.Utils;
 import com.zillabyte.motherbrain.utils.dfs.DFSServiceWrapper;
@@ -73,9 +69,9 @@ public class APIFlowBuilder implements FlowFetcher {
    * @throws FlowCompilationException 
    */
   @Override
-  public Flow buildFlow(String flowName, JSONObject overrideConfig) throws FlowCompilationException {
+  public Flow buildFlow(String flowName, JSONObject overrideConfig) {
+
     try {
-    
       // Builtin?
       if (BuiltinComponents.exists(flowName)) {
         return BuiltinComponents.create(flowName, overrideConfig);
@@ -90,7 +86,7 @@ public class APIFlowBuilder implements FlowFetcher {
       Flow cachedFlow  = null;
       try {
         cachedFlow = _container.maybeGetCachedFlow(concreteId, version);
-      } catch(Exception e) {
+      } catch (CachedFlowException e) {
         _log.warn("unable to deserialize cached flow: " + e.getMessage());
         cachedFlow = null;
       }
@@ -127,19 +123,19 @@ public class APIFlowBuilder implements FlowFetcher {
         return flow;
         
       }
-       
-    } catch(InterruptedException | MultiLangProcessException | ContainerException | TimeoutException | APIException | IOException | S3Exception e) {
-      throw (FlowCompilationException) new FlowCompilationException(e).setUserMessage("An error occurred while pulling flow "+flowName+" from our servers.").adviseRetry();
+    } catch (APIException | InterruptedException | TimeoutException e) {
+      throw new RuntimeException(e);
     }
+
   }
 
   
-  public Flow buildFlow(String flowName) throws FlowCompilationException {
+  public Flow buildFlow(String flowName) {
     return buildFlow(flowName, new JSONObject());
   }
 
   
-  private JSONArray buildMetaFiles(String concreteId, Integer version) throws ContainerException, IOException, S3Exception {
+  private JSONArray buildMetaFiles(String concreteId, Integer version) {
     
     // INIT
     DFSServiceWrapper dfs = Universe.instance().dfsService();

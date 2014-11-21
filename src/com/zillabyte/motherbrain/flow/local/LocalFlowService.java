@@ -5,10 +5,8 @@ import java.util.Map;
 import com.google.common.base.Throwables;
 import com.google.monitoring.runtime.instrumentation.common.com.google.common.collect.Maps;
 import com.google.monitoring.runtime.instrumentation.common.com.google.common.collect.Sets;
-import com.zillabyte.motherbrain.api.APIException;
 import com.zillabyte.motherbrain.flow.App;
 import com.zillabyte.motherbrain.flow.Component;
-import com.zillabyte.motherbrain.flow.FlowCompilationException;
 import com.zillabyte.motherbrain.flow.FlowInstance;
 import com.zillabyte.motherbrain.flow.FlowService;
 import com.zillabyte.motherbrain.flow.operations.Operation;
@@ -20,7 +18,7 @@ public class LocalFlowService implements FlowService {
   
   
   @Override
-  public synchronized FlowInstance registerApp(App app) throws InterruptedException, FlowCompilationException {
+  public synchronized FlowInstance registerApp(App app) {
     try { 
       
       if (_controllers.containsKey(app.getId())) {
@@ -62,7 +60,7 @@ public class LocalFlowService implements FlowService {
 
   
   @Override
-  public void registerComponent(Component comp) throws InterruptedException, FlowCompilationException, APIException {
+  public void registerComponent(Component comp) {
     
   }
 

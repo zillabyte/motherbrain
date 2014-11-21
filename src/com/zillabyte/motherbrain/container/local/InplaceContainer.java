@@ -14,7 +14,6 @@ import org.apache.tools.ant.types.Commandline;
 
 import com.google.common.collect.Maps;
 import com.zillabyte.motherbrain.container.Container;
-import com.zillabyte.motherbrain.container.ContainerException;
 import com.zillabyte.motherbrain.container.ContainerExecuteBuilder;
 import com.zillabyte.motherbrain.container.TcpSocketHelper;
 import com.zillabyte.motherbrain.container.UnixSocketHelper;
@@ -51,7 +50,7 @@ public class InplaceContainer implements Container, Serializable {
   }
 
   @Override
-  public void start() throws ContainerException {
+  public void start() {
     _log.info("starting container " + _flowConfig.getFlowId());
     _started  = true;
   }
@@ -64,7 +63,7 @@ public class InplaceContainer implements Container, Serializable {
    * @return
    * @throws ContainerException
    */
-  private MultiLangProcess executeCli(ServerSocket socket, String dir, String... command) throws ContainerException {
+  private MultiLangProcess executeCli(ServerSocket socket, String dir, String... command) {
     try { 
 
       // Sanity
@@ -121,7 +120,7 @@ public class InplaceContainer implements Container, Serializable {
       return process;
 
     } catch(Exception ex) {
-      throw (ContainerException) new ContainerException(ex).setUserMessage("Failed to execute \"" + command.toString() + "\".").adviseRetry();
+      throw new RuntimeException("Failed to execute \"" + command.toString() + "\".");
     }
   }
 
@@ -143,7 +142,7 @@ public class InplaceContainer implements Container, Serializable {
    * @throws ContainerException 
    */
   @Override
-  public File getFile(String internalPath) throws ContainerException {
+  public File getFile(String internalPath) {
     return new File(FilenameUtils.concat(_flowRoot.getAbsolutePath(), internalPath));
   }
   
@@ -152,7 +151,7 @@ public class InplaceContainer implements Container, Serializable {
    * For local containers, simply delete the container directory
    */
   @Override
-  public void cleanup() throws ContainerException {
+  public void cleanup() {
     _log.info("cleaning up container " + this._flowConfig.getFlowId() + " " + this._flowRoot);
     _started = false;
     //removeDirectory();
@@ -160,21 +159,15 @@ public class InplaceContainer implements Container, Serializable {
   
 
   @Override
-  public void writeFile(String internalPath, byte[] contents) throws ContainerException {
-    throw new IllegalStateException("Files should not be written to InPlace containers");
-//    try {
-//      File f = new File(_flowRoot, internalPath);
-//      Files.write(contents, f);
-//    } catch (IOException e) {
-//      throw new ContainerException(e);
-//    }   
+  public void writeFile(String internalPath, byte[] contents) {
+    throw new IllegalStateException("Files should not be written to InPlace containers");  
   }
   
   @Override
   public ContainerExecuteBuilder buildCommand() {
     return new ContainerExecuteBuilder() {
       @Override
-      public MultiLangProcess createProcess() throws ContainerException {
+      public MultiLangProcess createProcess() {
 
         // Port? 
         ServerSocket socket = null;
@@ -202,21 +195,19 @@ public class InplaceContainer implements Container, Serializable {
 
 
   @Override
-  public byte[] readFileAsBytes(String file) throws ContainerException {
+  public byte[] readFileAsBytes(String file) {
     try {
       File f = new File(_flowRoot, file);
       return FileUtils.readFileToByteArray(f);
     } catch (IOException e) {
-      throw (ContainerException) new ContainerException(e).setUserMessage("Failed to read \""+file+"\".").adviseRetry();
+      throw new RuntimeException("Failed to read \""+file+"\".");
     }
   }
 
 
   @Override
-  public void createDirectory(String path) throws ContainerException {
+  public void createDirectory(String path) {
     throw new IllegalStateException("Files should not be written to InPlace containers");
-//    File f = new File(_flowRoot, path);
-//    f.mkdirs();
   }
 
 

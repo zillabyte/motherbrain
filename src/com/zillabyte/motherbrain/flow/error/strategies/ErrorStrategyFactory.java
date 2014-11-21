@@ -8,7 +8,7 @@ import com.zillabyte.motherbrain.flow.operations.Operation;
 public abstract class ErrorStrategyFactory implements Serializable {
 
 
-  public abstract OperationErrorStrategy createOperationStrategy(Operation op);
+  public abstract OperationErrorStrategyWrapper createOperationStrategy(Operation op);
   
   public abstract FlowErrorStrategy createFlowStrategy();
   
@@ -17,8 +17,8 @@ public abstract class ErrorStrategyFactory implements Serializable {
   public static class Forgiving extends ErrorStrategyFactory {
     
     @Override
-    public OperationErrorStrategy createOperationStrategy(Operation op) {
-      return new PassiveWorkerPercentageAndAbsoluteOperationErrorStrategy(op);
+    public OperationErrorStrategyWrapper createOperationStrategy(Operation op) {
+      return new OperationErrorStrategyWrapper(new PassiveWorkerPercentageAndAbsoluteOperationErrorStrategy(op));
     }
     
     @Override
@@ -33,8 +33,8 @@ public abstract class ErrorStrategyFactory implements Serializable {
   public static class Strict extends ErrorStrategyFactory {
 
     @Override
-    public OperationErrorStrategy createOperationStrategy(Operation op) {
-      return new PassiveWorkerPercentageAndAbsoluteOperationErrorStrategy(op);
+    public OperationErrorStrategyWrapper createOperationStrategy(Operation op) {
+      return new OperationErrorStrategyWrapper(new PassiveWorkerPercentageAndAbsoluteOperationErrorStrategy(op));
     }
     
     @Override

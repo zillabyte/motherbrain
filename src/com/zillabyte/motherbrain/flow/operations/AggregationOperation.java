@@ -10,13 +10,9 @@ import java.util.concurrent.TimeoutException;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.monitoring.runtime.instrumentation.common.com.google.common.collect.Maps;
-import com.zillabyte.motherbrain.coordination.CoordinationException;
 import com.zillabyte.motherbrain.flow.Fields;
-import com.zillabyte.motherbrain.flow.FlowStateException;
 import com.zillabyte.motherbrain.flow.MapTuple;
-import com.zillabyte.motherbrain.flow.StateMachineException;
 import com.zillabyte.motherbrain.flow.StateMachineHelper;
-import com.zillabyte.motherbrain.flow.aggregation.AggregationException;
 import com.zillabyte.motherbrain.flow.aggregation.AggregationKey;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.collectors.coordinated.BatchedTuple;
@@ -24,9 +20,6 @@ import com.zillabyte.motherbrain.flow.collectors.coordinated.CoordTupleOptions;
 import com.zillabyte.motherbrain.flow.collectors.coordinated.CoordinatedOutputCollector;
 import com.zillabyte.motherbrain.flow.config.OperationConfig;
 import com.zillabyte.motherbrain.flow.error.strategies.FakeLocalException;
-import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangException;
-import com.zillabyte.motherbrain.relational.MissingFieldException;
-import com.zillabyte.motherbrain.top.MotherbrainException;
 import com.zillabyte.motherbrain.universe.Config;
 import com.zillabyte.motherbrain.utils.Log4jWrapper;
 import com.zillabyte.motherbrain.utils.Utils;
@@ -69,10 +62,10 @@ public abstract class AggregationOperation extends Operation implements Processa
   /**
    * @throws InterruptedException 
    * @throws OperationDeadException 
-   * @throws OperationException **
+   * @throws LoopException **
    * 
    */
-  public abstract void handleEmit(Object batch, Integer aggKeyStore) throws InterruptedException, OperationException, OperationDeadException;
+  public abstract void handleEmit(Object batch, Integer aggKeyStore) throws LoopException;
 
   /***
    * 
@@ -81,20 +74,20 @@ public abstract class AggregationOperation extends Operation implements Processa
    * @throws InterruptedException 
    * @throws MissingFieldException 
    */
-  public abstract void handleConsume(Object batch, MapTuple t, String sourceStream, OutputCollector c) throws MotherbrainException, InterruptedException;
+  public abstract void handleConsume(Object batch, MapTuple t, String sourceStream, OutputCollector c) throws LoopException;
 
   /***
    * 
    * @param tuple
    * @throws MissingFieldException
    */
-  protected AggregationKey getKey(Fields fields, MapTuple tuple) throws AggregationException {
+  protected AggregationKey getKey(Fields fields, MapTuple tuple) throws LoopException {
     
     // Extract the grouping key... 
     List<Object> list = Lists.newArrayListWithExpectedSize(fields.size());
     for(final String s : fields) {
       if (tuple.containsValueKey(s) == false) {
-        throw (AggregationException) new AggregationException().setAllMessages("The tuple " + tuple.toString() + " does not contain the grouping field: " + s);
+        throw new LoopException("The tuple " + tuple.toString() + " does not contain the grouping field: " + s);
       }
       list.add(tuple.get(s));
     }
@@ -127,13 +120,13 @@ public abstract class AggregationOperation extends Operation implements Processa
   /***
    * 
    * @param key
-   * @throws OperationException
+   * @throws LoopException
    */
-  protected MapTuple buildTupleFromKey(Fields fields, AggregationKey key) throws OperationException {
+  protected MapTuple buildTupleFromKey(Fields fields, AggregationKey key) throws LoopException {
     // Init
     MapTuple t = new MapTuple();
     if (fields.size() != key.groupValueSize()) {
-      throw (OperationException) new OperationException(this).setAllMessages("The aggregation key size did not match the fields size!");
+      throw new LoopException(this, "The aggregation key size did not match the fields size!");
     }
     for(int i=0;i<key.groupValueSize();i++) {
       t.put(fields.get(i), key.getGroupValue(i));
@@ -209,7 +202,7 @@ public abstract class AggregationOperation extends Operation implements Processa
    * @throws FakeLocalException 
    * @throws OperationDeadException 
    */
-  public void handleProcess(final MapTuple t, final String sourceStream, final OutputCollector c) throws InterruptedException, OperationException, FakeLocalException {
+  public void handleProcess(final MapTuple t, final String sourceStream, final OutputCollector c) throws FakeLocalException {
     try {
       
       switch(_state) {
@@ -236,7 +229,7 @@ public abstract class AggregationOperation extends Operation implements Processa
           }
           // Make sure we're alive..
           if (isAlive() == false) {
-            throw new OperationException(AggregationOperation.this, "The operation is not alive.");
+            throw new RuntimeException("The operation is not alive.");
           }
           // process
           c.resetCounter();
@@ -246,18 +239,16 @@ public abstract class AggregationOperation extends Operation implements Processa
           if (t instanceof BatchedTuple) {
             batch = ((BatchedTuple)t).batchId();
           } else {
-            throw new IllegalStateException("expected BatchedTuple");
+            throw new RuntimeException("Expected BatchedTuple");
           }
           
           c.resetCounter();
           // _log.info("consuming batch="+batch + " subBatch="+ subBatch + " tuple:" +t);
           handleConsume(batch, t, sourceStream, c);
             
-        } catch(OperationException e) {
+        } catch(LoopException e) {
           handleLoopError(e);
-        } catch(InterruptedException e) {
-          // Continue processing...
-        } catch(Throwable e) {
+        } catch(Exception e) {
           handleFatalError(e);
         } finally {
           markEndActivity();
@@ -280,16 +271,12 @@ public abstract class AggregationOperation extends Operation implements Processa
         
       default:
         // This should never be reached.
-        throw new FlowStateException(AggregationOperation.this, "don't know how to handle state: " + _state);
+        throw new RuntimeException("Unknown aggregation state: " + _state);
       }
-    } catch (TimeoutException e) {
-      handleLoopError(e);
-    } catch (MotherbrainException e) {
-      handleFatalError(e);
-    } catch (InterruptedException e) {
-      // do nothing
     } catch(FakeLocalException e) {
       e.printAndWait();
+    } catch (Exception e) {
+      handleFatalError(e);
     }
   }
   
@@ -302,7 +289,7 @@ public abstract class AggregationOperation extends Operation implements Processa
    * @throws InterruptedException 
    * @throws OperationDeadException 
    */
-  public void handleProcess(MapTuple t, OutputCollector c) throws InterruptedException, OperationException {
+  public void handleProcess(MapTuple t, OutputCollector c) throws InterruptedException, LoopException {
     handleProcess(t, "", c);
   }
 
@@ -311,14 +298,10 @@ public abstract class AggregationOperation extends Operation implements Processa
    * 
    */
   @Override
-  public void handleIdleDetected() throws InterruptedException, OperationException {
+  public void handleIdleDetected() {
     if(_doNotIdle) return;
-    try {
-      if (_state == AggregationState.STARTED || _state == AggregationState.ACTIVE || _state == AggregationState.SUSPECT) {
-        transitionToState(FunctionState.IDLE.toString(), true);
-      }
-    } catch (StateMachineException | TimeoutException | CoordinationException e) {
-      throw new OperationException(this, e);
+    if (_state == AggregationState.STARTED || _state == AggregationState.ACTIVE || _state == AggregationState.SUSPECT) {
+      transitionToState(FunctionState.IDLE.toString(), true);
     }
   }
 
@@ -327,12 +310,8 @@ public abstract class AggregationOperation extends Operation implements Processa
    * 
    */
   @Override
-  public void prePrepare() throws InterruptedException, OperationException {
-    try {
-      transitionToState(AggregationState.STARTING.toString(), true);
-    } catch (StateMachineException | TimeoutException | CoordinationException e) {
-      throw new OperationException(this, e);
-    }
+  public void prePrepare() {
+    transitionToState(AggregationState.STARTING.toString(), true);
   }
 
   
@@ -340,20 +319,16 @@ public abstract class AggregationOperation extends Operation implements Processa
    * 
    */
   @Override
-  public final void postPrepare() throws InterruptedException, OperationException {
-    try {
-      watchForAggregationCommands();
-      transitionToState(AggregationState.STARTED.toString(), true);
-    } catch (StateMachineException | TimeoutException | CoordinationException e) {
-      throw new OperationException(this, e);
-    }
+  public final void postPrepare() {
+    watchForAggregationCommands();
+    transitionToState(AggregationState.STARTED.toString(), true);
   }
 
   /**
    * @throws InterruptedException
    * @throws MultiLangException
    */
-  protected void aggregationCleanup() throws InterruptedException, MultiLangException {
+  protected void aggregationCleanup() {
     /* noop */
   }
 
@@ -362,7 +337,7 @@ public abstract class AggregationOperation extends Operation implements Processa
    * 
    */
   @Override
-  public final void cleanup() throws InterruptedException, OperationException, MultiLangException {
+  public final void cleanup() {
     super.cleanup();
     this.aggregationCleanup();
   }
@@ -374,7 +349,7 @@ public abstract class AggregationOperation extends Operation implements Processa
    * @throws InterruptedException
    * @throws CoordinationException
    */
-  private final void watchForAggregationCommands() throws InterruptedException, CoordinationException {
+  private final void watchForAggregationCommands() {
   }
 
 
@@ -418,7 +393,13 @@ public abstract class AggregationOperation extends Operation implements Processa
             if(!_startAggregationTime.containsKey(currentIterationStorePrefix)) _startAggregationTime.put(currentIterationStorePrefix, System.currentTimeMillis());
             
             // Do the emitting, then mark that we are done aggregating.
-            handleEmit(batchId, currentIterationStoreKey);
+            try {
+              handleEmit(batchId, currentIterationStoreKey);
+            } catch (LoopException e) {
+              handleLoopError(e);
+            } catch (Exception e) {
+              handleFatalError(e);
+            }
             c.handleChecks();
 
             // We can also update the pingOperations for the next iteration. If there are any iterations at all, we will only need to check
@@ -522,7 +503,7 @@ public abstract class AggregationOperation extends Operation implements Processa
    * @throws TimeoutException
    * @throws StateMachineException
    */
-  public synchronized void transitionToState(final AggregationState newState, final boolean transactional) throws CoordinationException, TimeoutException, StateMachineException {
+  public synchronized void transitionToState(final AggregationState newState, final boolean transactional) {
     AggregationState oldState = _state;
     _state = StateMachineHelper.transition(_state, newState);
     if(_state != oldState) notifyOfNewState(newState.toString(), transactional);
@@ -530,7 +511,7 @@ public abstract class AggregationOperation extends Operation implements Processa
   
   
   @Override
-  public synchronized void transitionToState(String newState, boolean transactional) throws CoordinationException, TimeoutException, StateMachineException {
+  public synchronized void transitionToState(String newState, boolean transactional) {
     transitionToState(AggregationState.valueOf(newState), transactional); 
   }
 

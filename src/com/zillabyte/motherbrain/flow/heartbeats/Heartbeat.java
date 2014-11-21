@@ -5,10 +5,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledFuture;
 
-import com.zillabyte.motherbrain.flow.error.strategies.FakeLocalException;
 import com.zillabyte.motherbrain.flow.operations.Operation;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
-import com.zillabyte.motherbrain.top.MotherbrainException;
 import com.zillabyte.motherbrain.universe.Config;
 import com.zillabyte.motherbrain.utils.Log4jWrapper;
 import com.zillabyte.motherbrain.utils.MeteredLog;
@@ -61,12 +58,12 @@ public class Heartbeat {
    * @throws HeartbeatException *
    * 
    */
-  public void start() throws HeartbeatException {
+  public void start() {
     
     // Sanity check
     _log.debug("Starting heartbeat...");
-    if (_timer != null) throw new HeartbeatException("timer already exists");
-    if (_errorTimer != null) throw new HeartbeatException("error timer already exists");
+    if (_timer != null) throw new RuntimeException("timer already exists");
+    if (_errorTimer != null) throw new RuntimeException("error timer already exists");
     if (_tickInterval >= HEARTBEAT_KILL_MS) throw new IllegalStateException("tick interval cannot be larger than kill interval");
     
     // Start polling...
@@ -107,7 +104,7 @@ public class Heartbeat {
    * @return
    * @throws HeartbeatException 
    */
-  protected String getOperationState() throws HeartbeatException {
+  protected String getOperationState() {
     return _op.getState();
   }
   
@@ -119,7 +116,7 @@ public class Heartbeat {
    */
   public Exception maybeGetHeartbeatException() {
     if (this._timer.isDone() || this._timer.isCancelled()) {
-      this._unhandledException = new HeartbeatException("Internal heartbeat timer is done/cancelled");
+      this._unhandledException = new RuntimeException("Internal heartbeat timer is done/cancelled");
       MeteredLog.info(_log, _op.instanceName() + " Heartbeat error: " + this._unhandledException);
       return this._unhandledException; 
     }
@@ -130,7 +127,7 @@ public class Heartbeat {
     } else { 
       // We've missed the heartbeat deadline ourselves?
       if (_lastHeartbeat + HEARTBEAT_KILL_MS < System.currentTimeMillis()) {
-        this._unhandledException = new HeartbeatException("Internal heartbeat miss");
+        this._unhandledException = new RuntimeException("Internal heartbeat miss");
         _log.error(_op.instanceName() + " Heartbeat error: " + this._unhandledException);
         return this._unhandledException; 
       }
@@ -180,7 +177,7 @@ public class Heartbeat {
       // Inform user...
       e.printStackTrace();
       _log.error("Ironic heartbeat error: " + e);
-      _op.logger().error(MotherbrainException.getRootUserMessage(e, "Internal operation error"));
+      _op.logger().error(e.getMessage());
       
       // Propagate error back to the operation... This will get rethrown on next iteration...
       _unhandledException = e;
@@ -210,7 +207,7 @@ public class Heartbeat {
       default:
         _op.heartbeatErrorCheck_ThreadUnsafe();
       }
-    } catch (OperationException | InterruptedException | FakeLocalException | HeartbeatException e) {
+    } catch (Exception e) {
       _log.warn("heartbeat exception in heartbeat error checking thread " + e);
     }
 
@@ -220,12 +217,8 @@ public class Heartbeat {
    * @throws HeartbeatException *
    * 
    */
-  private void handleActivityCheck() throws HeartbeatException {
-    try {
-      _op.handleActivityCheck_ThreadUnsafe();
-    } catch (Exception e) {
-      throw new HeartbeatException(e);
-    }
+  private void handleActivityCheck() {
+    _op.handleActivityCheck_ThreadUnsafe();
   }
 
 
@@ -233,12 +226,8 @@ public class Heartbeat {
    * @throws HeartbeatException **
    * 
    */
-  protected void handleHeartbeat() throws HeartbeatException {
-    try {
-      _op.sendMessageToFlow_ThreadUnsafe("state", getOperationState());
-    } catch (Exception e) {
-      throw new HeartbeatException(e);
-    }
+  protected void handleHeartbeat() {
+    _op.sendMessageToFlow_ThreadUnsafe("state", getOperationState());
   }
   
 
@@ -250,7 +239,7 @@ public class Heartbeat {
    * @return
    * @throws HeartbeatException 
    */
-  public static Heartbeat create(Operation operation, ExecutorService exec) throws HeartbeatException {
+  public static Heartbeat create(Operation operation, ExecutorService exec) {
     Heartbeat hb = new Heartbeat(operation, exec);
     hb.start();
     return hb;

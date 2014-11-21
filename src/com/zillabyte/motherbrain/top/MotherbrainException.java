@@ -14,98 +14,50 @@ public abstract class MotherbrainException extends Exception {
   private static final long serialVersionUID = -5435531522427865286L;
   
   // message for zb engineers
-  private String _internalMessage;        
+  private String _message;        
   
-  // to show the user (optional)
-  private String _userMessage;
-  
-  protected String _internalMessagePrefix = "";
+  protected String _messagePrefix = "";
   
   private final long _date;
   
   ///////////////////////////////////////////////////////////////////////////////
 
-  private MotherbrainException(final String internalMessage, final String userMessage, final Throwable cause) {
-    super(cause);
+  protected MotherbrainException(final String message, final Throwable cause) {
+    super(message, cause);
+    _message = message;
     _date = System.currentTimeMillis();
-    this._internalMessage = internalMessage;
-    this._userMessage = userMessage;
   }
   
-//  public MotherbrainException(String internalMessage, String userMessage, Throwable cause) {
-//    this(null, internalMessage, userMessage, cause);
-//  }
-
-  public MotherbrainException(String internalMessage, String userMessage) {
-    this(internalMessage, userMessage, null);
-  }
-  
-  public MotherbrainException(String internalMessage, Throwable cause) {
-    this(internalMessage, null, cause);
-  }
-  
-  public MotherbrainException(String internalMessage) {
-    this(internalMessage, null, null);
-  }
-
-  public MotherbrainException() {
-    this(null, null, null);
+  public MotherbrainException(String message) {
+    this(message, null);
   }
 
   public MotherbrainException(Throwable e) {
-    this(null, null, e);
-    if(e instanceof MotherbrainException) {
-      _internalMessage = ((MotherbrainException)e).getInternalMessage();
-      _userMessage = ((MotherbrainException)e).getUserMessage();
-    }
+    this(e.getMessage(), e);
   }
   
   ////////////////////////////////////////////////////////////////////
 
   @Override
   public String getMessage() {
-    if (_internalMessage != null) {
-      return _internalMessagePrefix + _internalMessage;
-    } else if (_userMessage != null) {
-      return _internalMessagePrefix + _userMessage;
+    if (_message != null) {
+      return _messagePrefix + _message;
     } else {
-      return _internalMessagePrefix + super.getMessage();
+      return _messagePrefix + super.getMessage();
     }
   }
 
-  public MotherbrainException setAllMessages(String message) {
-    this._internalMessage = message;
-    this._userMessage = message;
+  public MotherbrainException setMessage(String message) {
+    this._message = message;
     return this;
   }
-  
-  public String getInternalMessage() {
-    return _internalMessage;
-  }
-
-  public MotherbrainException setInternalMessage(String _internalMessage) {
-    this._internalMessage = _internalMessage;
-    return this;
-  }
-  
-  public String getUserMessage() {
-    return _userMessage;
-  }
-
-  public MotherbrainException setUserMessage(String _userMessage) {
-    this._userMessage = _userMessage;
-    if (this._internalMessage == null) 
-      _internalMessage = _userMessage;
-    return this;
-  }
-
 
   public long getDate() {
     return this._date;
   }
   
   public MotherbrainException adviseRetry() {
-    this._userMessage += " If there are no other errors, please try re-pushing. If the problem persists, please contact support@zillabyte.com. We apologize for the inconvenience.";
+    _message += " If there are no other errors, please try re-pushing. If the problem persists, please contact support@zillabyte.com. We apologize for the inconvenience.";
     return this;
   }
   
@@ -132,8 +84,7 @@ public abstract class MotherbrainException extends Exception {
 ////    }
 //    return sb.toString();
 //  }
-  
-  
+    
   
   public static MotherbrainException getRoot(Throwable t) {
     if (t.getCause() != null) {
@@ -144,17 +95,6 @@ public abstract class MotherbrainException extends Exception {
       return (MotherbrainException) t;
     } else {
       return null;
-    }
-  }
-  
-  
-  
-  public static String getRootUserMessage(Throwable t, String def) {
-    MotherbrainException tt = getRoot(t);
-    if (tt != null && tt.getUserMessage() != null && !tt.getUserMessage().equals("null")) {
-      return tt.getUserMessage();
-    } else {
-      return def;
     }
   }
   

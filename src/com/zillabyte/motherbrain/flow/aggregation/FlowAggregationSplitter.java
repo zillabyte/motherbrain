@@ -12,7 +12,6 @@ import com.zillabyte.motherbrain.flow.operations.AggregationOperation;
 import com.zillabyte.motherbrain.flow.operations.GroupBy;
 import com.zillabyte.motherbrain.flow.operations.Join;
 import com.zillabyte.motherbrain.flow.operations.Operation;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
 import com.zillabyte.motherbrain.flow.operations.Sink;
 import com.zillabyte.motherbrain.flow.operations.Source;
 
@@ -21,7 +20,7 @@ public final class FlowAggregationSplitter {
   
   
   
-  public static LinkedListMultimap<AggregationOperation, Operation> getAggregationPredecessors(App flow) throws OperationException {
+  public static LinkedListMultimap<AggregationOperation, Operation> getAggregationPredecessors(App flow) {
     
     // Init 
     final LinkedListMultimap<AggregationOperation, Operation> ret = LinkedListMultimap.create();
@@ -65,7 +64,7 @@ public final class FlowAggregationSplitter {
         
       } else if (thisOp instanceof AggregationOperation) {
         
-        throw (OperationException) new OperationException(thisOp, "unknown agg type").setUserMessage("Unknown aggregation type "+thisOp.type());
+        throw new RuntimeException("Unknown aggregation type "+thisOp.type());
         
       } else if (thisOp instanceof Source) {
         

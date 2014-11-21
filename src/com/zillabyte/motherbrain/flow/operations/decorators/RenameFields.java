@@ -6,10 +6,9 @@ import java.util.Map.Entry;
 import net.sf.json.JSONObject;
 
 import com.google.monitoring.runtime.instrumentation.common.com.google.common.collect.Maps;
-import com.zillabyte.motherbrain.flow.FlowCompilationException;
 import com.zillabyte.motherbrain.flow.MapTuple;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.flow.operations.Operation;
-import com.zillabyte.motherbrain.top.MotherbrainException;
 
 public class RenameFields implements EmitDecorator {
 
@@ -20,7 +19,7 @@ public class RenameFields implements EmitDecorator {
   private Operation _operation;
 
   
-  public RenameFields(JSONObject node) throws FlowCompilationException {
+  public RenameFields(JSONObject node) {
     if (node.has("rename")) {
       _renameMap = node.getJSONObject("rename");
     } else if (node.has("config") && node.getJSONObject("config").has("rename")) {
@@ -36,9 +35,9 @@ public class RenameFields implements EmitDecorator {
   
 
   @Override
-  public MapTuple execute(MapTuple t) throws MotherbrainException {
+  public MapTuple execute(MapTuple t) throws LoopException {
     for(Entry<String, String> e : _renameMap.entrySet()) {
-      if (e.getValue() == null) throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Cannot rename null value: " + e.toString());
+      if (e.getValue() == null) throw new LoopException(_operation, "Cannot rename null value: " + e.toString());
       Object val = t.get(e.getKey());
       t.remove(e.getKey());
       t.put(e.getValue(), val);

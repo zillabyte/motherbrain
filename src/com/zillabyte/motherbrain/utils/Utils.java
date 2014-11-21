@@ -411,7 +411,7 @@ public final class Utils {
    * @throws InterruptedException
    * @throws IOException
    */
-  public static int shell(Map<String,String> env, String[] command, final StringBuilder stdout, final StringBuilder stderr, MutableObject processCapture) throws InterruptedException, IOException {
+  public static int shell(Map<String,String> env, String[] command, final StringBuilder stdout, final StringBuilder stderr, MutableObject processCapture) {
     
     // Init
     ProcessBuilder pb = new ProcessBuilder(command);
@@ -423,7 +423,7 @@ public final class Utils {
       proc = pb.start();
       if (processCapture != null) processCapture.setValue(proc);
     } catch (IOException e) {
-      throw handleInterruptible(e);
+      throw new RuntimeException(e);
     }
     
     final BufferedReader stderrBuffer = new BufferedReader(new InputStreamReader(proc.getErrorStream()));
@@ -486,57 +486,63 @@ public final class Utils {
     final int exitCode;
     try {
       exitCode = proc.waitFor();
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
     } finally {
       try {
         stdoutThread.get();
       } catch (ExecutionException e) {
         execLog.error(e, e.getCause());
+      } catch (InterruptedException e1) {
+        throw new RuntimeException(e1);
       }
       try {
         stderrThread.get();
       } catch (ExecutionException e) {
         execLog.error(e, e.getCause());
+      } catch (InterruptedException e1) {
+        throw new RuntimeException(e1);
       }
     }
     return exitCode;
   }
   
-  public static int shell(String[] command, final StringBuilder stdout, final StringBuilder stderr, MutableObject processCapture) throws InterruptedException, IOException {
+  public static int shell(String[] command, final StringBuilder stdout, final StringBuilder stderr, MutableObject processCapture) {
     return shell(Collections.EMPTY_MAP, command, stdout, stderr, processCapture);
   }
-  public static int shell(String[] command, final StringBuilder stdout, final StringBuilder stderr) throws InterruptedException, IOException {
+  public static int shell(String[] command, final StringBuilder stdout, final StringBuilder stderr) {
     return shell(command, stdout, stderr, null);
   }
   
-  public static int shell(String command) throws InterruptedException, IOException {
+  public static int shell(String command) {
     return shell(Commandline.translateCommandline(command), null, null);
   }
   
-  public static int shell(String command, final StringBuilder stdout, final StringBuilder stderr, MutableObject processCapture) throws InterruptedException, IOException {
+  public static int shell(String command, final StringBuilder stdout, final StringBuilder stderr, MutableObject processCapture) {
     return shell(Commandline.translateCommandline(command), stdout, stderr, processCapture);
   }
   
-  public static int shell(String command, final StringBuilder stdout, final StringBuilder stderr) throws InterruptedException, IOException {
+  public static int shell(String command, final StringBuilder stdout, final StringBuilder stderr) {
     return shell(Commandline.translateCommandline(command), stdout, stderr);
   }
   
-  public static int shell(String command, final StringBuilder stdout) throws InterruptedException, IOException {
+  public static int shell(String command, final StringBuilder stdout) {
     return shell(Commandline.translateCommandline(command), stdout, null);
   }
   
-  public static int shell(String... command) throws InterruptedException, IOException {
+  public static int shell(String... command) {
     return shell(command, null, null);
   }
   
-  public static int shell(Map<String,String> env, String... command) throws InterruptedException, IOException {
+  public static int shell(Map<String,String> env, String... command) {
     return shell(env, command, null, null, null);
   }
   
-  public static int shell(Map<String, String> env, String command, StringBuilder stdout) throws InterruptedException, IOException {
+  public static int shell(Map<String, String> env, String command, StringBuilder stdout) {
     return shell(env, Commandline.translateCommandline(command), stdout, null, null);
   }
   
-  public static int shell(Map<String, String> env, String command, StringBuilder stdout, StringBuilder stderr) throws InterruptedException, IOException {
+  public static int shell(Map<String, String> env, String command, StringBuilder stdout, StringBuilder stderr) {
     return shell(env, Commandline.translateCommandline(command), stdout, stderr, null);
   }
 
@@ -794,33 +800,41 @@ public final class Utils {
     }
 
     @Override
-    public FileVisitResult preVisitDirectory(final Path dir, final BasicFileAttributes attrs) throws IOException {
+    public FileVisitResult preVisitDirectory(final Path dir, final BasicFileAttributes attrs) {
       if (sourcePath == null) {
         sourcePath = dir;
       } else {
-        Files.createDirectories(targetPath.resolve(sourcePath.relativize(dir)));
+        try {
+          Files.createDirectories(targetPath.resolve(sourcePath.relativize(dir)));
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
       }
       return FileVisitResult.CONTINUE;
     }
 
     @Override
-    public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs) throws IOException {
+    public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs) {
       /***
        * Copying from and LXC container is a bit weird, especially when there are symlinks involved. Since we
        * run zillabyte prep within the container, all symlinks with absolute paths are "absolute" relative to
        * the LXC container's root directory (rootfs). Hence, when we copy them, we need to tack on the lxcRootDir
        * path. Relative symlinks are naturally resolved by java.
        */
-      if(lxcRootDir != null && Files.isSymbolicLink(file)) {
-        Path linkPath = Files.readSymbolicLink(file);
-        if(linkPath.isAbsolute()) {
-          linkPath = (new File(lxcRootDir.toString(), linkPath.toString())).toPath();
-          Files.copy(linkPath, targetPath.resolve(sourcePath.relativize(file)));
-          return FileVisitResult.CONTINUE;
+      try {
+        if(lxcRootDir != null && Files.isSymbolicLink(file)) {
+          Path linkPath = Files.readSymbolicLink(file);
+          if(linkPath.isAbsolute()) {
+            linkPath = (new File(lxcRootDir.toString(), linkPath.toString())).toPath();
+            Files.copy(linkPath, targetPath.resolve(sourcePath.relativize(file)));
+            return FileVisitResult.CONTINUE;
+          }
         }
+        // Standard copy, resolves relative symlinks too
+        Files.copy(file, targetPath.resolve(sourcePath.relativize(file)));
+      } catch (IOException e) {
+        throw new RuntimeException(e);
       }
-      // Standard copy, resolves relative symlinks too
-      Files.copy(file, targetPath.resolve(sourcePath.relativize(file)));
       return FileVisitResult.CONTINUE;
     }
   }
@@ -846,37 +860,23 @@ public final class Utils {
   * @throws ExecutionException
   * @throws RetryException
   */
-  public static <T> T retry(int times, Callable<T> callable) throws ExecutionException, RetryException {
+  public static <T> T retry(int times, Callable<T> callable) {
     
     // Build the retryer
     RetryerBuilder<T> builder = RetryerBuilder.newBuilder();
     builder.withStopStrategy(StopStrategies.stopAfterAttempt(times));
     builder.withWaitStrategy(WaitStrategies.randomWait(2, TimeUnit.SECONDS, 20, TimeUnit.SECONDS));
     Retryer<T> retryer = builder.build();
-    return retryer.call(callable);
-    
-  }
-  
-  public static <T> T retry(Callable<T> callable) throws ExecutionException, RetryException {
-    return retry(3, callable);
-  }
-  
-  
-  /**
-   * Retry a call multiple times, supressing non runtime exceptions
-   * @param times
-   * @param callable
-   * @return
-   */
-  public static <T> T retryUnchecked(int times, Callable<T> callable) {
     try {
-      return retry(times, callable);
+      return retryer.call(callable);
     } catch (ExecutionException | RetryException e) {
       throw new RuntimeException(e);
     }
+    
   }
-  public static <T> T retryUnchecked(Callable<T> callable) {
-    return retryUnchecked(3, callable);
+  
+  public static <T> T retry(Callable<T> callable) {
+    return retry(3, callable);
   }
 
 
@@ -888,7 +888,7 @@ public final class Utils {
 
 
 
-  public static void bash(String command) throws InterruptedException, IOException {
+  public static void bash(String command) {
     Utils.shell("/bin/bash", "-l", "-c", command);
   }
 

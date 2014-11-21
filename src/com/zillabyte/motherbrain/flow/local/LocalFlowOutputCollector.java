@@ -13,11 +13,9 @@ import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.collectors.coordinated.ObserveIncomingTupleAction;
 import com.zillabyte.motherbrain.flow.graph.Connection;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.flow.operations.Operation;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
 import com.zillabyte.motherbrain.flow.operations.decorators.EmitDecorator;
-import com.zillabyte.motherbrain.relational.DefaultStreamException;
-import com.zillabyte.motherbrain.relational.UnexpectedFieldException;
 import com.zillabyte.motherbrain.top.MotherbrainException;
 
 public class LocalFlowOutputCollector implements OutputCollector {
@@ -35,23 +33,19 @@ public class LocalFlowOutputCollector implements OutputCollector {
   
   
   @Override
-  public void emit(String streamName, MapTuple t) throws OperationException {
+  public void emit(String streamName, MapTuple t) throws LoopException {
     this.emitAndGetTasks(streamName, t);
   }
 
   @Override
-  public void emit(MapTuple t) throws OperationException {
-    try {
-      emit(this.getDefaultStream(), t);
-    } catch (DefaultStreamException e) {
-      throw new OperationException(_slot.operation(), e);
-    }
+  public void emit(MapTuple t) throws LoopException {
+    emit(this.getDefaultStream(), t);
   }
 
 
   
   @Override
-  public void onAfterTuplesEmitted() throws OperationException {
+  public void onAfterTuplesEmitted() throws LoopException {
   }
   
 
@@ -75,7 +69,7 @@ public class LocalFlowOutputCollector implements OutputCollector {
   }
 
   @Override
-  public String getDefaultStream() throws DefaultStreamException {
+  public String getDefaultStream() {
     return _slot.operation().defaultStream();
   }
 
@@ -85,7 +79,7 @@ public class LocalFlowOutputCollector implements OutputCollector {
   }
 
   @Override
-  public List<Integer> emitAndGetTasks(String streamName, MapTuple t) throws OperationException {
+  public List<Integer> emitAndGetTasks(String streamName, MapTuple t) throws LoopException {
     t = handlePreEmit(streamName, t);    
     List<Integer> tasks = _slot.controller().emitToStream(streamName, t, this._slot.task());
     return tasks;
@@ -139,7 +133,7 @@ public class LocalFlowOutputCollector implements OutputCollector {
   }
 
   @Override
-  public ObserveIncomingTupleAction observePostQueuedCoordTuple(Object tuple, Integer sourceTask) throws OperationException {
+  public ObserveIncomingTupleAction observePostQueuedCoordTuple(Object tuple, Integer sourceTask) throws LoopException {
     if (tuple instanceof MapTuple) {
       this.observeIncomingTuple((MapTuple)tuple);
     }
@@ -147,7 +141,7 @@ public class LocalFlowOutputCollector implements OutputCollector {
   }
   
   @Override
-  public ObserveIncomingTupleAction observePreQueuedCoordTuple(Object tuple, Integer originTask) throws OperationException {
+  public ObserveIncomingTupleAction observePreQueuedCoordTuple(Object tuple, Integer originTask) throws LoopException {
     return ObserveIncomingTupleAction.CONTINUE;
   }
 
@@ -214,7 +208,7 @@ public class LocalFlowOutputCollector implements OutputCollector {
   
 
 
-  private MapTuple handlePreEmit(String streamName, MapTuple t) throws OperationException {
+  private MapTuple handlePreEmit(String streamName, MapTuple t) throws LoopException {
     
     // Pre-processors
     t = handlePostEmitDecorators(streamName, t);
@@ -251,38 +245,38 @@ public class LocalFlowOutputCollector implements OutputCollector {
 
   
   
-  protected void ensureExpected(String streamName, MapTuple t) throws OperationException {
+  protected void ensureExpected(String streamName, MapTuple t) throws LoopException {
     // _log.info("ensureExpected: streamName=" + streamName + " mapTuple=" + t);
     if (operation().outputStreams().contains(streamName) == false) {
       this.operation().getTopFlow().graph().debug();
-      throw new OperationException(this.operation(), new UnexpectedFieldException().setUserMessage("Emitted to an unexpected stream: '" + streamName + "'. Expected: " + this.operation().outputStreams()));
+      throw new LoopException(this.operation(), "Emitted to an unexpected stream: '" + streamName + "'. Expected: " + this.operation().outputStreams());
     }
     for (String field : this.operation().getExpectedFields(streamName)) {
       if (t.values().containsKey(field) == false) {
-        throw new OperationException(this.operation(), new UnexpectedFieldException().setUserMessage("The tuple: '" + t.toString() + "' does not contain expected field: '" + field + "'"));
+        throw new LoopException(this.operation(), "The tuple: '" + t.toString() + "' does not contain expected field: '" + field + "'");
       }
     }
   }
 
 
-  private MapTuple handlePostEmitDecorators(String stream, MapTuple t) throws OperationException {
+  private MapTuple handlePostEmitDecorators(String stream, MapTuple t) throws LoopException {
     try {
       for(EmitDecorator dec : operation().emitDecorators(stream)) {
         t = dec.execute(t);
       }
       return t;
     } catch(MotherbrainException e) {
-      throw new OperationException(operation(), e);
+      throw new LoopException(operation(), e);
     }
   }
 
 
   
-  private MapTuple handleMerge(MapTuple t) throws OperationException {
+  private MapTuple handleMerge(MapTuple t) throws LoopException {
     
     // Sanity.. 
     if (operation().getOperationShouldMerge() && _inputTuple == null)
-      throw new OperationException(operation(), "the input tuple is null for a merge!");
+      throw new LoopException(operation(), "the input tuple is null for a merge!");
 
     // If we need to merge the input tuple into the output tuple...
     if (_inputTuple != null) {
@@ -301,7 +295,7 @@ public class LocalFlowOutputCollector implements OutputCollector {
         if (field.contains(Operation.COMPONENT_CARRY_FIELD_PREFIX)) {
           // Carry the tuple to the next operation.... 
           if (Operation.NONLINEAR_OPS.contains(operation().type()))
-            throw new OperationException(operation(), "input field merge requested for component containing aggregation, merges are only allowed on components with only each and filter operations (this includes nested component operations).");
+            throw new LoopException(operation(), "input field merge requested for component containing aggregation, merges are only allowed on components with only each and filter operations (this includes nested component operations).");
           t.add(field, value);
         }
       }

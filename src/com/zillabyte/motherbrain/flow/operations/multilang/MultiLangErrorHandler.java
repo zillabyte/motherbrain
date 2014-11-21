@@ -1,6 +1,6 @@
 package com.zillabyte.motherbrain.flow.operations.multilang;
 
-import com.zillabyte.motherbrain.flow.operations.OperationException;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 
 public interface MultiLangErrorHandler {
 
@@ -9,7 +9,7 @@ public interface MultiLangErrorHandler {
   
   public Exception getNextError();
  
-  public void maybeThrowNextError() throws OperationException;
+  public void maybeThrowNextError() throws LoopException;
   
   
 }

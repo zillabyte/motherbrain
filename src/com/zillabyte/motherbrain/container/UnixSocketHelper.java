@@ -34,8 +34,12 @@ public class UnixSocketHelper {
       super();
     }
     
-    public void bind(SocketAddress endpoint, int backlog) throws IOException {
-      super.bind(endpoint, backlog);
+    public void bind(SocketAddress endpoint, int backlog) {
+      try {
+        super.bind(endpoint, backlog);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
       _endpoint = (AFUNIXSocketAddress) endpoint;
     }
     
@@ -51,7 +55,7 @@ public class UnixSocketHelper {
    * Synchronized doesn't help in a multi-process env.
    * @throws Exception
    */
-  public synchronized static void maybeUnpackNativeLibraries() throws Exception {
+  public synchronized static void maybeUnpackNativeLibraries() {
     
     File destDir = new File("/tmp/junixsocket");
     File destDirReady = new File("/tmp/junixsocket/ready");
@@ -94,7 +98,7 @@ public class UnixSocketHelper {
   }
   
   
-  public static ServerSocket createUnixSocket(File socketFile) throws ContainerException {
+  public static ServerSocket createUnixSocket(File socketFile) {
     try {
       
       maybeUnpackNativeLibraries();
@@ -102,7 +106,7 @@ public class UnixSocketHelper {
       server.bind(new AFUNIXSocketAddress(socketFile));
       return server;
     } catch (Exception e) {
-      throw (ContainerException) new ContainerException(e).setUserMessage("Failed to initialize Unix Socket.").adviseRetry();
+      throw new RuntimeException("Failed to initialize Unix Socket.");
     }
   }
   

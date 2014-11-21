@@ -1,24 +1,18 @@
 package com.zillabyte.motherbrain.flow.rpc;
 
-import java.util.concurrent.TimeoutException;
-
 import org.apache.log4j.Logger;
 import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.javatuples.Pair;
 
-import com.zillabyte.motherbrain.coordination.CoordinationException;
 import com.zillabyte.motherbrain.flow.MapTuple;
-import com.zillabyte.motherbrain.flow.StateMachineException;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.collectors.coordinated.CoordinatedOutputCollector;
 import com.zillabyte.motherbrain.flow.operations.FunctionState;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.flow.operations.Source;
 import com.zillabyte.motherbrain.flow.operations.SourceState;
-import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangException;
 import com.zillabyte.motherbrain.flow.rpc.queues.InputQueue;
-import com.zillabyte.motherbrain.top.MotherbrainException;
 import com.zillabyte.motherbrain.universe.Config;
 import com.zillabyte.motherbrain.universe.Universe;
 import com.zillabyte.motherbrain.utils.Utils;
@@ -46,7 +40,7 @@ public final class RPCSource extends Source {
    * 
    */
   @Override
-  public void prepare() throws OperationException {
+  public void prepare() {
     _inputQueue = Universe.instance().rpcQueueFactory().getInputQueue(this);
     _inputQueue.init();
   }
@@ -56,7 +50,7 @@ public final class RPCSource extends Source {
    * 
    */
   @Override
-  protected boolean nextTuple(OutputCollector rawCollector) throws OperationException, InterruptedException {
+  protected boolean nextTuple(OutputCollector rawCollector) throws LoopException {
     
     // Get the next request (if any) from the queue...
     RPCRequest request = _inputQueue.getNextRequest();
@@ -74,12 +68,6 @@ public final class RPCSource extends Source {
           markEmit();
           collector.emit(tuple);
         }
-
-      } catch(MotherbrainException e) {
-
-        // Fail this request 
-        log.error(e.getInternalMessage());
-        this.logger().error(e.getUserMessage());   
 
       } finally {
         
@@ -117,14 +105,10 @@ public final class RPCSource extends Source {
   }
 
   @Override
-  public void handleIdleDetected() throws InterruptedException, OperationException {
+  public void handleIdleDetected() {
     // Transition the RPC source to idle state from STARTED. The onEndCycle below will take care of this transition from EMITTING to IDLE.
-    try {
-      if (isReadyForIdle() && _state == SourceState.STARTED ) {
-        transitionToState(FunctionState.IDLE.toString(), true);
-      }
-    } catch (StateMachineException | TimeoutException | CoordinationException e) {
-      throw new OperationException(this, e);
+    if (isReadyForIdle() && _state == SourceState.STARTED ) {
+      transitionToState(FunctionState.IDLE.toString(), true);
     }
   }
 
@@ -140,18 +124,14 @@ public final class RPCSource extends Source {
 
   
   @Override
-  public void onBeginCycle(@NonNull OutputCollector output) throws InterruptedException, OperationException, CoordinationException, StateMachineException, TimeoutException  {
+  public void onBeginCycle(@NonNull OutputCollector output) {
     transitionToState(SourceState.EMITTING.toString(), true);
   }
   
   @Override
-  public void onEndCycle(OutputCollector output) throws InterruptedException, OperationException, CoordinationException, StateMachineException, TimeoutException {
+  public void onEndCycle(OutputCollector output) {
     transitionToState(SourceState.IDLE.toString(), true);
-    try {
-      handleStats_ThreadUnsafe();
-    } catch (CoordinationException e) {
-      throw new OperationException(this, e);
-    }
+    handleStats_ThreadUnsafe();
   }
   
   @Override
@@ -160,7 +140,7 @@ public final class RPCSource extends Source {
   }
   
   @Override
-  public void cleanup() throws MultiLangException, OperationException, InterruptedException {
+  public void cleanup() {
     super.cleanup();
     _inputQueue.shutdown();
   }

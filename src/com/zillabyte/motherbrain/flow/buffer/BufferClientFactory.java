@@ -1,6 +1,6 @@
 package com.zillabyte.motherbrain.flow.buffer;
 
-import com.zillabyte.motherbrain.flow.operations.OperationException;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 
 
 
@@ -11,9 +11,9 @@ import com.zillabyte.motherbrain.flow.operations.OperationException;
  */
 public interface BufferClientFactory {
 
-  public BufferConsumer createConsumer(SourceFromBuffer operation) throws OperationException;
+  public BufferConsumer createConsumer(SourceFromBuffer operation) throws LoopException;
   
-  public BufferProducer createProducer(SinkToBuffer operation) throws OperationException;
+  public BufferProducer createProducer(SinkToBuffer operation) throws LoopException;
 
   public BufferFlusher createFlusher();
   

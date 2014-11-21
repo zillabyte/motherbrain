@@ -16,7 +16,7 @@ public class StateMachineHelper {
    * @return
    * @throws StateMachineException 
    */
-  public static <T extends StateMachine<?>> T transition(T oldState, T newState) throws StateMachineException {
+  public static <T extends StateMachine<?>> T transition(T oldState, T newState) {
     
     if (oldState == null) throw new NullPointerException("old state must not be null");
     if (newState == null) throw new NullPointerException("new state must not be null");
@@ -26,7 +26,7 @@ public class StateMachineHelper {
 //      log.info("Transitioning from "+oldState.toString()+" to "+newState.toString());
       return newState;
     } else {
-      throw (StateMachineException) new StateMachineException().setAllMessages("Cannot transition from " + oldState + " to " + newState+".");
+      throw new RuntimeException("Cannot transition from " + oldState + " to " + newState+".");
     }
 
   }

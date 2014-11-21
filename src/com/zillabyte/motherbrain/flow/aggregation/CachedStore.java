@@ -7,6 +7,7 @@ import org.apache.log4j.Logger;
 
 import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.operations.AggregationOperation;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.universe.Config;
 import com.zillabyte.motherbrain.utils.Utils;
 
@@ -66,9 +67,9 @@ public class CachedStore implements AggregationStore {
    * 
    */
   @Override
-  public synchronized void addToGroup(Object batch, AggregationKey key, MapTuple tuple) throws AggregationException {
+  public synchronized void addToGroup(Object batch, AggregationKey key, MapTuple tuple) throws LoopException {
     _store.addToGroup(batch, key, tuple);
-    mabyeSwitch(tuple);
+    maybeSwitch(tuple);
   }
 
 
@@ -77,7 +78,7 @@ public class CachedStore implements AggregationStore {
    * 
    */
   @Override
-  public synchronized boolean hasGroup(Object batch, AggregationKey key) throws AggregationException {
+  public synchronized boolean hasGroup(Object batch, AggregationKey key) throws LoopException {
     return _store.hasGroup(batch, key);
   }
 
@@ -86,7 +87,7 @@ public class CachedStore implements AggregationStore {
    * 
    */
   @Override
-  public synchronized Iterator<MapTuple> getGroupIterator(Object batch, AggregationKey key) throws AggregationException {
+  public synchronized Iterator<MapTuple> getGroupIterator(Object batch, AggregationKey key) throws LoopException {
     return _store.getGroupIterator(batch, key);
   }
 
@@ -95,7 +96,7 @@ public class CachedStore implements AggregationStore {
    * 
    */
   @Override
-  public synchronized void deleteGroup(Object batch, AggregationKey key) throws AggregationException {
+  public synchronized void deleteGroup(Object batch, AggregationKey key) throws LoopException {
     _store.deleteGroup(batch, key);
   }
   
@@ -104,7 +105,7 @@ public class CachedStore implements AggregationStore {
    * Move contents from memory to disk
    * @throws AggregationException  
    */
-  public synchronized void flush(Object batch) throws AggregationException {
+  public synchronized void flush(Object batch) throws LoopException {
     _store.flush(batch);
   }
 
@@ -114,7 +115,7 @@ public class CachedStore implements AggregationStore {
    * 
    */
   @Override
-  public synchronized Iterator<AggregationKey> keyIterator(Object batch) throws AggregationException {
+  public synchronized Iterator<AggregationKey> keyIterator(Object batch) throws LoopException {
     return _store.keyIterator(batch);
   }
   
@@ -124,7 +125,7 @@ public class CachedStore implements AggregationStore {
    * 
    */
   @Override
-  public void deleteBatch(Object batch) throws AggregationException {
+  public void deleteBatch(Object batch) throws LoopException {
     _store.deleteBatch(batch);
   }
   
@@ -133,7 +134,7 @@ public class CachedStore implements AggregationStore {
    * @param tuple
    * @throws AggregationException 
    */
-  private synchronized void mabyeSwitch(MapTuple tuple) throws AggregationException {
+  private synchronized void maybeSwitch(MapTuple tuple) throws LoopException {
     
     _currentSize += tuple.getApproxMemSize();
     

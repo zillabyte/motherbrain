@@ -1,6 +1,5 @@
 package com.zillabyte.motherbrain.flow.operations;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Collections;
@@ -9,7 +8,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -29,29 +27,23 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.monitoring.runtime.instrumentation.common.com.google.common.collect.LinkedListMultimap;
 import com.zillabyte.motherbrain.benchmarking.Benchmark;
-import com.zillabyte.motherbrain.coordination.CoordinationException;
 import com.zillabyte.motherbrain.coordination.Lock;
 import com.zillabyte.motherbrain.coordination.MessageHandler;
 import com.zillabyte.motherbrain.coordination.Watcher;
 import com.zillabyte.motherbrain.flow.Fields;
 import com.zillabyte.motherbrain.flow.Flow;
-import com.zillabyte.motherbrain.flow.StateMachineException;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.collectors.coordinated.CoordinatedOutputCollector;
 import com.zillabyte.motherbrain.flow.config.OperationConfig;
 import com.zillabyte.motherbrain.flow.config.UserConfig;
 import com.zillabyte.motherbrain.flow.error.strategies.FakeLocalException;
 import com.zillabyte.motherbrain.flow.error.strategies.OperationErrorStrategy;
+import com.zillabyte.motherbrain.flow.error.strategies.OperationErrorStrategyWrapper;
 import com.zillabyte.motherbrain.flow.graph.Connection;
 import com.zillabyte.motherbrain.flow.heartbeats.Heartbeat;
-import com.zillabyte.motherbrain.flow.heartbeats.HeartbeatException;
 import com.zillabyte.motherbrain.flow.operations.decorators.EmitDecorator;
-import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangException;
 import com.zillabyte.motherbrain.metrics.Metrics;
-import com.zillabyte.motherbrain.relational.DefaultStreamException;
-import com.zillabyte.motherbrain.top.MotherbrainException;
 import com.zillabyte.motherbrain.universe.Config;
-import com.zillabyte.motherbrain.universe.S3Exception;
 import com.zillabyte.motherbrain.universe.Universe;
 import com.zillabyte.motherbrain.utils.DateHelper;
 import com.zillabyte.motherbrain.utils.JSONUtil;
@@ -104,7 +96,7 @@ public abstract class Operation implements Serializable {
   protected ExponentialBackoffTicker _ipcLogBackoff = new ExponentialBackoffTicker(
       10000/* 100 */);
   protected transient Heartbeat _heartbeat = null;
-  protected transient OperationErrorStrategy _errorStrategy = null;
+  protected transient OperationErrorStrategyWrapper _errorStrategy = null;
   protected int _loopErrors = 0;
   protected OperationSleeper _sleeper = new OperationSleeper();
   protected Map<String, Fields> _expectedFields = new HashMap<>();
@@ -213,8 +205,7 @@ public abstract class Operation implements Serializable {
   /**
    * 
    */
-  public final void handleStats_ThreadUnsafe() throws InterruptedException,
-      CoordinationException {
+  public final void handleStats_ThreadUnsafe() {
 
     // Init
     Map<String, Object> stats = Maps.newHashMap();
@@ -261,7 +252,7 @@ public abstract class Operation implements Serializable {
   /**
    * 
    */
-  public void handleActivityCheck_ThreadUnsafe() throws InterruptedException, OperationException {
+  public void handleActivityCheck_ThreadUnsafe() {
     // _log.debug(instanceName()+" -- In handle activity check: "+_lastActivity+" "+_inOperation);
     if (_lastActivity + this._idleTriggerPeriod < System.currentTimeMillis() && _inOperationCounter.get() == 0) {
       handleIdleDetected();
@@ -302,8 +293,7 @@ public abstract class Operation implements Serializable {
   /****
    * Retrhows any error that have been caught be other threads..
    */
-  public void heartbeatErrorCheck_ThreadUnsafe() throws InterruptedException,
-      OperationException, FakeLocalException {
+  public void heartbeatErrorCheck_ThreadUnsafe() throws FakeLocalException {
 
     // Init
     Throwable rethrow = null;
@@ -321,11 +311,6 @@ public abstract class Operation implements Serializable {
       // throw new OperationException("heartbeat is not running");
     }
 
-    // Do we have any fatal errors?
-    rethrow = _errorStrategy.maybeGetFatalError();
-    if (rethrow != null) {
-      throw new OperationException(this, rethrow);
-    }
   }
 
   protected final static Metrics metrics() {
@@ -334,21 +319,21 @@ public abstract class Operation implements Serializable {
 
   /**
    * Override me!
-   * @throws OperationException 
+   * @throws LoopException 
    */
-  public void prepare() throws MultiLangException, InterruptedException, OperationException {
+  public void prepare() {
   }
 
   /**
    * Override me!
    */
-  public void prePrepare() throws InterruptedException, OperationException {
+  public void prePrepare() {
   }
 
   /**
    * Override me!
    */
-  public void postPrepare() throws InterruptedException, OperationException {
+  public void postPrepare() {
 
   }
 
@@ -477,7 +462,7 @@ public abstract class Operation implements Serializable {
   }
 
 
-  protected void reportInfo() throws OperationException, InterruptedException {
+  protected void reportInfo() {
 
     Map<String, Object> basicInfo = Maps.newHashMap();
     if (_extraInfo != null)
@@ -494,19 +479,15 @@ public abstract class Operation implements Serializable {
     basicInfo.put("type", this.type());
     basicInfo.put("name", this.namespaceName());
     basicInfo.put("operation_id", this.namespaceOperationId());
-    try {
-      sendTransactionalMessageToFlow("info", basicInfo);
-    } catch (TimeoutException | CoordinationException e) {
-      throw new OperationException(this, e);
-    }
+    
+    sendTransactionalMessageToFlow("info", basicInfo);
 
   }
 
 
   protected void errorCheck() {
     // Init
-    Throwable rethrow = null;
-
+    
     try {
       // Do we have unhandled heartbeat exceptions?
       if (_heartbeat.maybeGetHeartbeatException() != null) {
@@ -514,20 +495,13 @@ public abstract class Operation implements Serializable {
         getErrorStrategy().handleHeartbeatDeath();
       }
 
-      // Do we have any fatal errors?
-      rethrow = getErrorStrategy().maybeGetFatalError();
-      if (rethrow != null) {
-        throw new OperationException(this, rethrow);
-      }
-    } catch (OperationException | FakeLocalException e) {
-      _log.warn("Error occurred during error check in " + instanceName() + ": "
-          + e.getMessage());
+    } catch (FakeLocalException e) {
+      _log.warn("Error occurred during error check in " + instanceName() + ": " + e.getMessage());
     }
 
   }
 
-  protected void notifyOfNewState(String newState, boolean transactional)
-      throws TimeoutException, CoordinationException {
+  protected void notifyOfNewState(String newState, boolean transactional) {
     _operationLogger.writeLog("Transitioning to state: " + newState,
         OperationLogger.LogPriority.RUN);
     if (transactional) {
@@ -561,8 +535,7 @@ public abstract class Operation implements Serializable {
   /**
    * Override me!
    */
-  public void cleanup() throws MultiLangException, OperationException,
-      InterruptedException {
+  public void cleanup() {
     /* noop */
   }
 
@@ -579,53 +552,40 @@ public abstract class Operation implements Serializable {
     if (inState("KILLING", "KILLED"))
       return;
 
-    // INIT
-    _log.info(instanceName() + " cleaning up: " + this.toString());
-    if (!inState("ERROR", "ERRORING")) {
-      try {
+    try {
+      // INIT
+      _log.info(instanceName() + " cleaning up: " + this.toString());
+      if (!inState("ERROR", "ERRORING")) {
         transitionToState("KILLING");
-      } catch (StateMachineException | CoordinationException | TimeoutException e) {
-        e.printStackTrace();
       }
-    }
 
-    // Stop listeners... 
-    try {
+      // Stop listeners... 
       stopWatchingFlowCommands();
-    } catch (CoordinationException e) {
-      e.printStackTrace();
-    }
-    
-    try {
+
       cleanup();
-    } catch (OperationException | InterruptedException e) {
-      e.printStackTrace();
-    }
-    
-    if (_heartbeat != null)
-      _heartbeat.shutdown();
 
-    // Done
-    if (!inState("ERROR", "ERRORING")) {
-      try {
+      if (_heartbeat != null)
+        _heartbeat.shutdown();
+
+      // Done
+      if (!inState("ERROR", "ERRORING")) {
         transitionToState("KILLED");
-      } catch (StateMachineException | CoordinationException | TimeoutException e) {
-        e.printStackTrace();
       }
-    }
 
-    // Stop threads related to this operaiton...
-    if (_executor != null) {
-      _log.info("stopping executor...");
-      _executor.shutdownNow();
+      // Stop threads related to this operaiton...
+      if (_executor != null) {
+        _log.info("stopping executor...");
+        _executor.shutdownNow();
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
     }
   }
 
   /***
    * Sends a message to the flowinstance. REACTOR SAFE
    */
-  public void sendMessageToFlow_ThreadUnsafe(final String command,
-      final Object payload) throws CoordinationException {
+  public void sendMessageToFlow_ThreadUnsafe(final String command, final Object payload) {
     synchronized (_messageMonitor) {
       Universe
           .instance()
@@ -635,8 +595,7 @@ public abstract class Operation implements Serializable {
     }
   }
 
-  protected void sendTransactionalMessageToFlow(String command, Object payload)
-      throws TimeoutException, CoordinationException {
+  protected void sendTransactionalMessageToFlow(String command, Object payload) {
     synchronized (_messageMonitor) {
       Universe
           .instance()
@@ -650,14 +609,14 @@ public abstract class Operation implements Serializable {
   protected void updateMiscStats(Map<String, Object> stats) {
   }
 
-  protected synchronized void handleIdleDetected() throws InterruptedException, OperationException {
+  protected synchronized void handleIdleDetected() {
   }
 
   public void handlePostHeartbeat_ThreadUnsafe() {
     // called after a heartbeat. use for testing.
   }
 
-  public void onSetExpectedFields() throws OperationException {
+  public void onSetExpectedFields() throws LoopException {
     if (_incomingRouteByFields != null) {
       for (Connection conn : this.prevConnections()) {
         for (String field : _incomingRouteByFields) {
@@ -678,19 +637,16 @@ public abstract class Operation implements Serializable {
     // when they're fully done processing. TODO: remove this condition if/when
     // we figure out how
     // to make loopback-flows signal total completion of a batch.
-    if (!this.getTopFlow().getFlowConfig().get("rpc", false)
-        && this.getTopFlow().graph().hasLoopbacks() == false) {
+    if (!this.getTopFlow().getFlowConfig().get("rpc", false) && this.getTopFlow().graph().hasLoopbacks() == false) {
       try {
         synchronized (this) {
           handleIdleDetected();
           if (this.inState("EMITTING", "ACTIVE"))
             transitionToState("IDLE");
         }
-      } catch (StateMachineException | CoordinationException | TimeoutException
-          | InterruptedException | OperationException e) {
+      } catch (Exception e) {
         // Not the end of the world if this errors.... Do nothing.
-        _log.error("error in preemptive idle: "
-            + ExceptionUtils.getFullStackTrace(e));
+        _log.error("error in preemptive idle: " + ExceptionUtils.getFullStackTrace(e));
       }
     }
   }
@@ -729,31 +685,24 @@ public abstract class Operation implements Serializable {
   public abstract String type();
 
 
-  public void handleFatalError(Throwable e) throws OperationException, FakeLocalException {
-    if(e instanceof MotherbrainException) {
-      _operationLogger.writeLog( "FATAL ERROR: "+MotherbrainException.getRootUserMessage(e, "Internal cluster error. Please try 'zillabyte errors'."), OperationLogger.LogPriority.ERROR);
-    }
+  public void handleFatalError(Exception e) throws FakeLocalException {
+    _operationLogger.writeLog( "FATAL ERROR: "+e.getMessage(), OperationLogger.LogPriority.ERROR);
     this._errorStrategy.handleFatalError(e);
   }
 
 
-  public void handleLoopError(Throwable e) throws OperationException, FakeLocalException {
-    if(e instanceof MotherbrainException) {
-      _operationLogger.writeLog( "LOOP ERROR (WARNING): "+MotherbrainException.getRootUserMessage(e, "Internal cluster error. Please try 'zillabyte errors'."), OperationLogger.LogPriority.ERROR);
-    }
+  public void handleLoopError(LoopException e) throws FakeLocalException {
+    _operationLogger.writeLog( "LOOP ERROR (WARNING): "+e.getMessage(), OperationLogger.LogPriority.ERROR);
     this._errorStrategy.handleLoopError(e);
   }
 
-  public void reportError(final Throwable e) throws InterruptedException,
-      CoordinationException {
+  public void reportError(final Throwable e) {
     this.sendMessageToFlow_ThreadUnsafe("errors", e);
   }
 
-  public abstract void transitionToState(String s, boolean transactional)
-      throws StateMachineException, TimeoutException, CoordinationException;
+  public abstract void transitionToState(String s, boolean transactional);
 
-  public void transitionToState(String s) throws StateMachineException,
-      CoordinationException, TimeoutException {
+  public void transitionToState(String s) {
     transitionToState(s, false);
   }
 
@@ -762,14 +711,14 @@ public abstract class Operation implements Serializable {
   }
 
   /**
-   * @throws OperationException
+   * @throws LoopException
    */
-  public Operation prevNonLoopOperation() throws OperationException {
+  public Operation prevNonLoopOperation() {
     final Iterator<Operation> iter = this.prevNonLoopOperations().iterator();
     final Operation op = iter.next();
     assert (op != null);
     if (iter.hasNext()) {
-      throw (OperationException) new OperationException(this).setAllMessages("Did not expect more than one prev operation for " + this.instanceName() + ". Prev ops: " + this.prevNonLoopOperations());
+      throw new RuntimeException("Did not expect more than one prev operation for " + this.instanceName() + ". Prev ops: " + this.prevNonLoopOperations());
     }
     return op;
   }
@@ -790,22 +739,22 @@ public abstract class Operation implements Serializable {
     return this.getTopFlow().graph().nonLoopConnectionsFrom(this);
   }
 
-  public Connection nextNonLoopConnection() throws OperationException {
+  public Connection nextNonLoopConnection() {
     final Iterator<Connection> iter = this.nextNonLoopConnections().iterator();
     final Connection conn = iter.next();
     assert (conn != null);
     if (iter.hasNext()) {
-      throw (OperationException) new OperationException(this).setAllMessages("Did not expect more than one next connection for op: "+namespaceName()+". Next conns: " + this.nextNonLoopConnections());
+      throw new RuntimeException("Did not expect more than one next connection for op: "+namespaceName()+". Next conns: " + this.nextNonLoopConnections());
     }
     return conn;
   }
 
-  public Connection prevNonLoopConnection() throws OperationException {
+  public Connection prevNonLoopConnection() {
     final Iterator<Connection> iter = this.prevNonLoopConnections().iterator();
     final Connection conn = iter.next();
     assert (conn != null);
     if (iter.hasNext()) {
-      throw (OperationException) new OperationException(this).setAllMessages("Did not expect more than one prev connection for op: "+namespaceName()+". Prev conns: " + this.prevNonLoopConnections());
+      throw new RuntimeException("Did not expect more than one prev connection for op: "+namespaceName()+". Prev conns: " + this.prevNonLoopConnections());
     }
     return conn;
   }
@@ -822,12 +771,12 @@ public abstract class Operation implements Serializable {
     return getTopFlow().graph().connectionsFrom(this.namespaceName());
   }
 
-  public Operation nextNonLoopOperation() throws OperationException {
+  public Operation nextNonLoopOperation() {
     final Iterator<Operation> iter = this.nextNonLoopOperations().iterator();
     final Operation op = iter.next();
     assert (op != null);
     if (iter.hasNext()) {
-      throw (OperationException) new OperationException(this).setAllMessages("Did not expect more than one next operation for " + this.instanceName()+". Next ops: "+this.nextNonLoopOperations());
+      throw new RuntimeException("Did not expect more than one next operation for " + this.instanceName()+". Next ops: "+this.nextNonLoopOperations());
     }
     return op;
   }
@@ -846,9 +795,9 @@ public abstract class Operation implements Serializable {
   /***
    * 
    */
-  public void addExpectedFields(final String stream, final Fields fields) throws OperationException {
+  public void addExpectedFields(final String stream, final Fields fields) {
     if (outputStreams().contains(stream) == false) {
-      throw (OperationException) new OperationException(this).setAllMessages("The stream " + stream + " has not been declared. Declared: " + outputStreams().toString());
+      throw new RuntimeException("The stream " + stream + " has not been declared. Declared: " + outputStreams().toString());
     }
     if (_expectedFields.containsKey(stream) == false) {
       _expectedFields.put(stream, new Fields());
@@ -874,27 +823,20 @@ public abstract class Operation implements Serializable {
   /**
    * 
    */
-  public String defaultStream() throws DefaultStreamException {
-    try {
-      final Iterator<String> iter = outputStreams().iterator();
-      final String stream = iter.next();
-      assert (stream != null);
-      if (iter.hasNext()) {
-        throw new DefaultStreamException();
-      }
-      return stream;
-    } catch (NoSuchElementException | DefaultStreamException e) {
-      throw (DefaultStreamException) new DefaultStreamException(e)
-          .setUserMessage("You must explicitly declare the stream to emit to. Expected: "
-              + outputStreams().toString());
+  public String defaultStream() {
+    final Iterator<String> iter = outputStreams().iterator();
+    final String stream = iter.next();
+    assert (stream != null);
+    if (iter.hasNext()) {
+      throw new RuntimeException("You must explicitly declare the stream to emit to. Expected: " + outputStreams().toString());
     }
+    return stream;
   }
 
   /**
    * 
    */
-  public void onFinalizeDeclare() throws OperationException,
-      InterruptedException {
+  public void onFinalizeDeclare() {
   }
 
   public int getMaxParallelism() {
@@ -940,27 +882,22 @@ public abstract class Operation implements Serializable {
     _operationLogger.writeLog("checking for snapshot...", OperationLogger.LogPriority.SYSTEM);
 
     try {
-      Utils.retryUnchecked(3, new Callable<Void>() {
+      Utils.retry(3, new Callable<Void>() {
         @Override
         public Void call() throws Exception {
-          try {
-            
-            String snapshotJSON = Universe.instance().dfsService().readFileAsString(s3SnapshotKey());
-            if (snapshotJSON != null) {
-              _operationLogger.writeLog("found snapshot, applying...", OperationLogger.LogPriority.SYSTEM);
-              JSONObject snapshot = JSONUtil.parseObj(snapshotJSON);
-              applySnapshot(snapshot);
-              _operationLogger.writeLog("applied snapshot", OperationLogger.LogPriority.SYSTEM);
+          String snapshotJSON = Universe.instance().dfsService().readFileAsString(s3SnapshotKey());
+          if (snapshotJSON != null) {
+            _operationLogger.writeLog("found snapshot, applying...", OperationLogger.LogPriority.SYSTEM);
+            JSONObject snapshot = JSONUtil.parseObj(snapshotJSON);
+            applySnapshot(snapshot);
+            _operationLogger.writeLog("applied snapshot", OperationLogger.LogPriority.SYSTEM);
 
-              // Delete old snapshot
-              _operationLogger.writeLog("deleting old snapshot...", OperationLogger.LogPriority.SYSTEM);
-              
-              Universe.instance().dfsService().deleteFile(s3SnapshotKey());
-              _operationLogger.writeLog("deleted snapshot", OperationLogger.LogPriority.SYSTEM);
+            // Delete old snapshot
+            _operationLogger.writeLog("deleting old snapshot...", OperationLogger.LogPriority.SYSTEM);
 
-            }
-          } catch (IOException e) {
-            throw (OperationException) new OperationException(Operation.this, e).setAllMessages("An error occurred while handling operation snapshot.");
+            Universe.instance().dfsService().deleteFile(s3SnapshotKey());
+            _operationLogger.writeLog("deleted snapshot", OperationLogger.LogPriority.SYSTEM);
+
           }
           return null;
         }
@@ -972,24 +909,18 @@ public abstract class Operation implements Serializable {
 
 
   private String s3SnapshotKey() {
-    return
-        Utils.prefixKey("flows/" + this.getContainerFlow().getId() + "/snapshots/" + instanceName());
+    return Utils.prefixKey("flows/" + this.getContainerFlow().getId() + "/snapshots/" + instanceName());
   }
 
 
   /***
    * 
-   * @throws OperationException
+   * @throws LoopException
    */
-  public void handlePause() throws OperationException {
+  public void handlePause() {
 
     // transition to PAUSING
-    try {
-      if (!getState().equalsIgnoreCase("ERROR"))
-        transitionToState("PAUSING");
-    } catch (StateMachineException | CoordinationException | TimeoutException e) {
-      _operationLogger.writeLog("An error occurred while transitioning to PAUSING: " + e.getMessage(), OperationLogger.LogPriority.ERROR);
-    }
+    if (!getState().equalsIgnoreCase("ERROR")) transitionToState("PAUSING");
 
     // Spin on queue for emitting
     // TODO add timeout
@@ -999,20 +930,15 @@ public abstract class Operation implements Serializable {
   
     // upload snapshot
     _operationLogger.writeLog("Creating snapshot", OperationLogger.LogPriority.SYSTEM);
-    Utils.retryUnchecked(3, new Callable<Void>() {
+    Utils.retry(3, new Callable<Void>() {
       @Override
-      public Void call() throws OperationException {
+      public Void call() throws LoopException {
         JSONObject snapshot = createSnapshot();
 
         if (!snapshot.isEmpty()) {
-          try {
-
-            _operationLogger.writeLog("created snapshot, uploading to S3... at " + s3SnapshotKey(), OperationLogger.LogPriority.SYSTEM);
-            Universe.instance().dfsService().writeFile(s3SnapshotKey(), snapshot.toString());
-            _operationLogger.writeLog("Uploaded snapshot ", OperationLogger.LogPriority.SYSTEM);
-          } catch (IOException | S3Exception | InterruptedException e) {
-            throw (OperationException) new OperationException(Operation.this, e).setAllMessages("An error occured during snapshot creation.");
-          }
+          _operationLogger.writeLog("created snapshot, uploading to S3... at " + s3SnapshotKey(), OperationLogger.LogPriority.SYSTEM);
+          Universe.instance().dfsService().writeFile(s3SnapshotKey(), snapshot.toString());
+          _operationLogger.writeLog("Uploaded snapshot ", OperationLogger.LogPriority.SYSTEM);
         }
         return null;
       }
@@ -1022,7 +948,7 @@ public abstract class Operation implements Serializable {
     try {
       if (!getState().equalsIgnoreCase("ERROR"))
         transitionToState("PAUSED");
-    } catch (StateMachineException | CoordinationException | TimeoutException e) {
+    } catch (Exception e) {
       _operationLogger.writeLog("An error occurred while transitioning to PAUSED: " + e.getMessage(), OperationLogger.LogPriority.ERROR);
     }
   }
@@ -1045,9 +971,9 @@ public abstract class Operation implements Serializable {
 
   /***
    * 
-   * @throws OperationException
+   * @throws LoopException
    */
-  public void handleResume() throws OperationException {
+  public void handleResume() {
 
     _operationLogger
         .writeLog("resuming...", OperationLogger.LogPriority.SYSTEM);
@@ -1057,20 +983,14 @@ public abstract class Operation implements Serializable {
 
 
     // resume the operation
-    try {
-      if (!getState().equalsIgnoreCase("ERROR"))
-        transitionToState("EMITTING");
-    } catch (StateMachineException | CoordinationException | TimeoutException e) {
-      _log.warn("An error occured while trying to resume " + e.getMessage());
-    }
+    if (!getState().equalsIgnoreCase("ERROR")) transitionToState("EMITTING");
   }
 
   /***
    * known aliases this operation is emitting
    */
   @SuppressWarnings("unchecked")
-  public Map<String, String> getAliases() throws OperationException,
-      InterruptedException {
+  public Map<String, String> getAliases() {
     return Collections.EMPTY_MAP;
   }
 
@@ -1085,8 +1005,7 @@ public abstract class Operation implements Serializable {
    * 
    */
   @NonNullByDefault
-  public void setState(String key, Object val) throws InterruptedException,
-      CoordinationException {
+  public void setState(String key, Object val) {
     Universe.instance().state()
         .setState(operationStateKey() + SOURCE_STATE_KEY_PREFIX + key, val);
   }
@@ -1094,26 +1013,21 @@ public abstract class Operation implements Serializable {
   /***
    * 
    */
-  public final <T> T getState(String key, T def) throws InterruptedException,
-      CoordinationException {
-    return Universe.instance().state()
-        .getState(operationStateKey() + SOURCE_STATE_KEY_PREFIX + key, def);
-
+  public final <T> T getState(String key, T def) {
+    return Universe.instance().state().getState(operationStateKey() + SOURCE_STATE_KEY_PREFIX + key, def);
   }
 
   /****
    * 
    */
-  public final <T> T getState(String key) throws InterruptedException,
-      CoordinationException {
-    return Universe.instance().state()
-        .getState(operationStateKey() + SOURCE_STATE_KEY_PREFIX + key);
+  public final <T> T getState(String key) {
+    return Universe.instance().state().getState(operationStateKey() + SOURCE_STATE_KEY_PREFIX + key);
   }
 
   /***
    * 
    */
-  public void onBatchCompleting(final Object batchId) throws OperationException {
+  public void onBatchCompleting(final Object batchId) throws LoopException {
     // Do nothing by default
   }
 
@@ -1128,15 +1042,14 @@ public abstract class Operation implements Serializable {
   /**
    * Wrapper around prepare()...
    */
-  public final void handlePrepare(final OutputCollector collector) throws InterruptedException, OperationException, OperationDeadException {
+  public final void handlePrepare(final OutputCollector collector) {
     try {
       try {
 
         // INIT
         _collector = collector;
         markBeginActivity();
-        _errorStrategy = Universe.instance().errorStrategyFactory()
-            .createOperationStrategy(Operation.this);
+        _errorStrategy = Universe.instance().errorStrategyFactory().createOperationStrategy(Operation.this);
 
         /**************************************************
          ** INITIAL STAGE *********************************
@@ -1144,13 +1057,13 @@ public abstract class Operation implements Serializable {
         Utils.executeWithin(_initial_stage_timeout_ms, new Callable<Void>() {
 
           @Override
-          public Void call() throws OperationException, InterruptedException, CoordinationException, TimeoutException, HeartbeatException {
+          public Void call() throws Exception {
 
             // Init
             Benchmark.markBegin("operation.prepare.initial");
             _log.info("operation instance is starting prepare(): " + instanceName());
             Lock lock = Universe.instance().state().lock("flow_instance_index_" + lockPrefix());
-            if (lock == null) throw new NullPointerException("null lock?: " + Universe.instance().state());
+            if (lock == null) throw new RuntimeException("Null lock?: " + Universe.instance().state());
 
             // Create an executor for hearts & state services
             _executor = Utils.createPrefixedExecutorPool("flow-" + topFlowId() + "-operation-" + instanceName());
@@ -1206,13 +1119,11 @@ public abstract class Operation implements Serializable {
         Utils.executeWithin(_pre_prepare_stage_timeout_ms,
             new Callable<Void>() {
               @Override
-              public Void call() throws OperationException,
-                  InterruptedException {
+              public Void call() throws Exception {
 
                 Benchmark.markBegin("operation.prepare.pre_prepare");
                 _log.info("beginning pre-prepare stage...");
-                _operationLogger.writeLog("Beginning prepare",
-                    OperationLogger.LogPriority.STARTUP);
+                _operationLogger.writeLog("Beginning prepare", OperationLogger.LogPriority.STARTUP);
                 prePrepare();
 
                 _log.info("done with pre-prepare");
@@ -1227,7 +1138,7 @@ public abstract class Operation implements Serializable {
          **************************************************/
         Utils.executeWithin(_prepare_stage_timeout_ms, new Callable<Void>() {
           @Override
-          public Void call() throws MultiLangException, OperationException, InterruptedException {
+          public Void call() throws Exception {
 
             _log.info("begin prepare stage");
             Benchmark.markBegin("operation.prepare.actual");
@@ -1249,7 +1160,9 @@ public abstract class Operation implements Serializable {
         handleFatalError(e);
 
       } catch (TimeoutException e) {
-        handleFatalError(new OperationException(this, e).setUserMessage("Prepare timeout exceeded."));
+        handleFatalError(new RuntimeException("Prepare timeout exceeded."));
+      } catch (InterruptedException e) {
+        handleFatalError(new RuntimeException("Prepare interrupted!"));
       }
 
       try {
@@ -1275,36 +1188,27 @@ public abstract class Operation implements Serializable {
    * Functions calling reactor functions directly.
    * 
    */
-  private final void watchForFlowCommands() throws OperationException, InterruptedException {
+  private final void watchForFlowCommands() {
     // _log.info("before watchForFlowCommands");
-    try {
-      _flowCommandWatcher  = Universe
-          .instance()
-          .state()
-          .watchForMessage(_executor, flowStateKey() + "/operation_commands",
-              new MessageHandler() {
-                @Override
-                public final void handleNewMessage(String key, Object command)
-                    throws OperationException, InterruptedException {
+    _flowCommandWatcher  = Universe
+        .instance()
+        .state()
+        .watchForMessage(_executor, flowStateKey() + "/operation_commands",
+            new MessageHandler() {
+          @Override
+          public final void handleNewMessage(String key, Object command) {
 
-                  // Let subclasses handle it...
-                  _log.info(Operation.this.instanceName() + " received operation_command: " + command);
-                  // System.err.println("foo");
-                  try {
-                    handleFlowCommand((String) command);
-                  } catch (Exception e) {
-                    throw (OperationException) new OperationException(Operation.this, e).setAllMessages("An error occurred while handling the flow command: "+command+".");
-                  }
-                }
+            // Let subclasses handle it...
+            _log.info(Operation.this.instanceName() + " received operation_command: " + command);
+            // System.err.println("foo");
+            handleFlowCommand((String) command);
+          }
 
-              });
-    } catch (CoordinationException e) {
-      throw new OperationException(this, e);
-    }
+        });
   }
   
   
-  private void stopWatchingFlowCommands() throws CoordinationException {
+  private void stopWatchingFlowCommands() {
     if (_flowCommandWatcher != null) {
       _flowCommandWatcher.unsubscribe();
       _flowCommandWatcher = null;
@@ -1317,7 +1221,7 @@ public abstract class Operation implements Serializable {
    * @param command
    * @throws Exception
    */
-  protected void handleFlowCommand(String command) throws Exception {
+  protected void handleFlowCommand(String command) {
     if (command.equalsIgnoreCase("die")) {
       _operationLogger.writeLog("killing ourself...(" + this.instanceName() + ")", OperationLogger.LogPriority.RUN);
       handleCleanup();

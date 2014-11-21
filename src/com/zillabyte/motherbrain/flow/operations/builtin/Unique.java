@@ -14,7 +14,7 @@ import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.config.OperationConfig;
 import com.zillabyte.motherbrain.flow.operations.Function;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.flow.operations.multilang.operations.MultilangHandler;
 import com.zillabyte.motherbrain.universe.Config;
 
@@ -94,7 +94,7 @@ public class Unique extends Function {
   }
 
   @Override
-  protected void process(MapTuple t, OutputCollector c) throws OperationException, InterruptedException {
+  protected void process(MapTuple t, OutputCollector c) throws LoopException {
     BloomFilter<MapTuple> filter = getFilter(c.getCurrentBatch());
     if (filter.mightContain(t)) {
       // Do nothing... 

@@ -1,18 +1,16 @@
 package com.zillabyte.motherbrain.flow.error.strategies;
 
-import com.zillabyte.motherbrain.flow.operations.OperationException;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 
 public interface OperationErrorStrategy {
 
   
-  void handleLoopError(Throwable error) throws OperationException, FakeLocalException;
+  void handleLoopError(LoopException error) throws FakeLocalException;
 
-  void handleFatalError(Throwable error) throws OperationException, FakeLocalException;
+  void handleFatalError(Throwable error) throws FakeLocalException;
 
   long getErrorCount();
 
-  Throwable maybeGetFatalError();
-
-  void handleHeartbeatDeath() throws OperationException, FakeLocalException;
+  void handleHeartbeatDeath() throws FakeLocalException;
   
 }

@@ -1,7 +1,5 @@
 package com.zillabyte.motherbrain.flow.operations.multilang.operations;
 
-import java.util.concurrent.TimeoutException;
-
 import net.sf.json.JSONObject;
 
 import org.apache.log4j.Logger;
@@ -9,15 +7,12 @@ import org.javatuples.Pair;
 
 import com.zillabyte.motherbrain.benchmarking.Benchmark;
 import com.zillabyte.motherbrain.container.ContainerWrapper;
-import com.zillabyte.motherbrain.coordination.CoordinationException;
 import com.zillabyte.motherbrain.flow.EndCyclePolicy;
 import com.zillabyte.motherbrain.flow.MapTuple;
-import com.zillabyte.motherbrain.flow.StateMachineException;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.flow.operations.OperationLogger;
 import com.zillabyte.motherbrain.flow.operations.Source;
-import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangException;
 import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangProcessTupleObserver;
 
 public class MultiLangRunSource extends Source implements MultiLangOperation {
@@ -46,13 +41,13 @@ public class MultiLangRunSource extends Source implements MultiLangOperation {
   
   
   @Override
-  public void prepare() throws MultiLangException, InterruptedException {
+  public void prepare() {
     _handler.prepare();
   }
   
 
   @Override
-  public final void cleanup() throws MultiLangException, InterruptedException {
+  public final void cleanup() {
     _handler.cleanup();
   }
 
@@ -64,23 +59,31 @@ public class MultiLangRunSource extends Source implements MultiLangOperation {
   
   
   @Override
-  public void onBeginCycle(OutputCollector output) throws InterruptedException, OperationException, CoordinationException, StateMachineException, TimeoutException {
+  public void onBeginCycle(OutputCollector output) {
     super.onBeginCycle(output);
     _handler.writeMessage("{\"command\": \"begin_cycle\"}");
-    _handler.waitForDoneMessageWithoutCollecting();
-    _handler.maybeThrowNextError();
+    try {
+      _handler.waitForDoneMessageWithoutCollecting();
+      _handler.maybeThrowNextError();
+    } catch (LoopException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   
   @Override
-  public void onEndCycle(OutputCollector output) throws OperationException, InterruptedException, CoordinationException, StateMachineException, TimeoutException {
+  public void onEndCycle(OutputCollector output) {
     super.onEndCycle(output);
-    _handler.maybeThrowNextError();
+    try {
+      _handler.maybeThrowNextError();
+    } catch (LoopException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   
   @Override
-  protected boolean nextTuple(OutputCollector collector) throws InterruptedException, OperationException {
+  protected boolean nextTuple(OutputCollector collector) throws LoopException {
 
     Benchmark.markBegin("multilang.source.next_tuple");
     try {
@@ -98,7 +101,7 @@ public class MultiLangRunSource extends Source implements MultiLangOperation {
           _handler.takeNextTuple();
         } else {
           // Otherwise something is weird...
-          throw (OperationException) new OperationException(this, "Attempt to get nextTuple when there are still queued tuples: " + _handler.tupleObserver().queue()).setUserMessage("If you are seeing this message it likely indicates an error occurred in the multilang source process (scroll up to find it!).");
+          throw new LoopException(this, "Attempt to get nextTuple when there are still queued tuples: " + _handler.tupleObserver().queue());
         }
       }
 
@@ -157,11 +160,10 @@ public class MultiLangRunSource extends Source implements MultiLangOperation {
           continue;
           
         } else if (output instanceof Throwable) {
-          System.err.println("GOT A THROWABLE");
-          throw (OperationException) new OperationException(this, (Throwable) output).setUserMessage("The multilang process returned an error");
+          throw new LoopException(this, (Throwable) output);
           
         } else { 
-          throw (OperationException) new OperationException(this).setAllMessages("The multilang process returned uninterpretable data of type: "+output.getClass().getName()+".");
+          throw new LoopException(this, "The multilang process returned uninterpretable data of type: "+output.getClass().getName()+".");
           
         }
       } while(output != MultiLangProcessTupleObserver.DONE_MARKER);

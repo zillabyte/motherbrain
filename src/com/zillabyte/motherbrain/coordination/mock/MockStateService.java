@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -16,7 +15,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.zillabyte.motherbrain.coordination.AskHandler;
 import com.zillabyte.motherbrain.coordination.AskWrapper;
-import com.zillabyte.motherbrain.coordination.CoordinationException;
 import com.zillabyte.motherbrain.coordination.CoordinationService;
 import com.zillabyte.motherbrain.coordination.MessageHandler;
 import com.zillabyte.motherbrain.coordination.Watcher;
@@ -148,7 +146,7 @@ public class MockStateService implements CoordinationService, AskWrapper.Askable
     
     return(new com.zillabyte.motherbrain.coordination.Lock() {
       @Override
-      public void release() throws CoordinationException {
+      public void release() {
         Lock l = _locks.get(name);
         if (l == null) throw new NullPointerException("tried to unlock non existant lock: " + name);
 
@@ -245,22 +243,22 @@ public class MockStateService implements CoordinationService, AskWrapper.Askable
   }
 
   @Override
-  public void sendTransactionalMessage(ExecutorService exec, String channel, Object message, long timeout) throws CoordinationException, TimeoutException {
+  public void sendTransactionalMessage(ExecutorService exec, String channel, Object message, long timeout) {
     _askWrapper.sendTransactionalMessage(exec, channel, message, timeout);
   }
 
   @Override
-  public Watcher watchForAsk(ExecutorService exec, String channel, AskHandler askHandler) throws CoordinationException {
+  public Watcher watchForAsk(ExecutorService exec, String channel, AskHandler askHandler) {
     return _askWrapper.watchForAsk(exec, channel, askHandler);
   }
 
   @Override
-  public Object ask(ExecutorService exec, String channel, Object message, long timeout) throws CoordinationException, TimeoutException {
+  public Object ask(ExecutorService exec, String channel, Object message, long timeout) {
     return _askWrapper.ask(exec, channel, message, timeout);
   }
 
   @Override
-  public void handleNewMessage(String key, Object message, MessageHandler handler) throws CoordinationException {
+  public void handleNewMessage(String key, Object message, MessageHandler handler) {
     _askWrapper.handleNewMessage(key, message, handler);
   }
   

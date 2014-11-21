@@ -1,6 +1,5 @@
 package com.zillabyte.motherbrain.flow;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -10,12 +9,10 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import net.sf.json.JSONObject;
 
@@ -28,18 +25,14 @@ import org.javatuples.Pair;
 import com.google.common.collect.Maps;
 import com.zillabyte.motherbrain.api.APIException;
 import com.zillabyte.motherbrain.coordination.AskHandler;
-import com.zillabyte.motherbrain.coordination.CoordinationException;
 import com.zillabyte.motherbrain.coordination.MessageHandler;
 import com.zillabyte.motherbrain.coordination.Watcher;
 import com.zillabyte.motherbrain.flow.operations.Operation;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
 import com.zillabyte.motherbrain.flow.operations.OperationLogger;
 import com.zillabyte.motherbrain.flow.operations.OperationMessage;
 import com.zillabyte.motherbrain.top.LocalServiceMain;
 import com.zillabyte.motherbrain.top.MotherbrainException;
 import com.zillabyte.motherbrain.universe.Config;
-import com.zillabyte.motherbrain.universe.S3Exception;
-import com.zillabyte.motherbrain.universe.SSHException;
 import com.zillabyte.motherbrain.universe.Universe;
 import com.zillabyte.motherbrain.utils.JSONUtil;
 import com.zillabyte.motherbrain.utils.SerializableMonitor;
@@ -178,16 +171,12 @@ public class FlowInstance implements Serializable {
 
 
 
-  public void maybeUpdateFlowState() throws InterruptedException, StateMachineException, FlowException, OperationException, CoordinationException {
+  public void maybeUpdateFlowState() {
     synchronized(_stateMonitor) {
       FlowState newState = _stateCoordinator.maybeGetNewFlowState(instancesSetBuilder(),  _state);
       if(newState != _state) {
         if(newState == FlowState.ERROR) {
-          try {
-            killImpl(FlowState.ERROR);
-          } catch (Exception e) {
-            throw (FlowException) new FlowException(_flow, e).setAllMessages("An error occurred when trying to kill flow. Most of the time this shouldn't matter.");
-          }
+          killImpl(FlowState.ERROR);
         } else {
           transitionToState(newState);
         }
@@ -196,7 +185,7 @@ public class FlowInstance implements Serializable {
   }
 
 
-  public void transitionToState(FlowState target) throws StateMachineException {
+  public void transitionToState(FlowState target) {
     synchronized(_stateMonitor) {
       try {
         FlowState oldState = _state;
@@ -208,8 +197,6 @@ public class FlowInstance implements Serializable {
           }
           notifyOfNewState(_state.toString());
         }
-      } catch (TimeoutException e) {
-        throw (StateMachineException) new StateMachineException(e).setAllMessages("Timeout occurred during transition from "+_state+" to "+target+" state.");
       } finally {
         synchronized (_stateChangeMonitor) {
           _stateChangeMonitor.notifyAll();
@@ -230,12 +217,12 @@ public class FlowInstance implements Serializable {
   }
 
 
-  private void notifyOfNewState(String newState) throws TimeoutException, StateMachineException {
+  private void notifyOfNewState(String newState) {
     // Only notify API of new state if we're an app, not if we're a component rpc
     try {
       Universe.instance().api().postFlowState(id(), newState, _flow._flowConfig.getAuthToken());
     } catch(APIException ex) {
-      throw new StateMachineException(ex);
+      throw new RuntimeException(ex);
     }
     final String message = "Transitioned to state "+ newState.toString();
     _logger.writeLog(message, OperationLogger.LogPriority.RUN);
@@ -261,7 +248,7 @@ public class FlowInstance implements Serializable {
   //  @Override
 
 
-  public Map<String, Object> buildDetailsMap() throws StateMachineException, InterruptedException {
+  public Map<String, Object> buildDetailsMap() {
     final Map<String, Object> m = Maps.newHashMap();
     m.put("instances", this._instances.getJSONDetails());
     m.put("flow_id", id());
@@ -289,8 +276,7 @@ public class FlowInstance implements Serializable {
         errorMap.put("internal_message", e.toString());
         errorMap.put("stack_trace", ExceptionUtils.getFullStackTrace(e));
         if (me != null) {
-          errorMap.put("internal_message", me.getInternalMessage());
-          errorMap.put("user_message", me.getUserMessage());
+          errorMap.put("message", me.getMessage());
           errorMap.put("date", dateFormat.format(Utils.valueOf(me.getDate())));
         }
         errorMap.put("processed_date", dateFormat.format(d));
@@ -309,7 +295,7 @@ public class FlowInstance implements Serializable {
 
 
 
-  public FlowInstance waitForState(FlowState... state) throws InterruptedException, StateMachineException {
+  public FlowInstance waitForState(FlowState... state) {
     waitForState(-1, state); // wait forever
     return this; // for chaining
   }
@@ -317,7 +303,7 @@ public class FlowInstance implements Serializable {
 
 
 
-  public boolean waitForState(final long timeoutMillis, final FlowState... states) throws InterruptedException, StateMachineException {
+  public boolean waitForState(final long timeoutMillis, final FlowState... states) {
     final long timeoutNanos = TimeUnit.NANOSECONDS.convert(timeoutMillis, TimeUnit.MILLISECONDS);
     final boolean infiniteLoop = timeoutMillis < 0;
     final long monitorTimeoutMillis;
@@ -341,13 +327,17 @@ public class FlowInstance implements Serializable {
       }
       if (infiniteLoop) {
         if (curState == FlowState.ERROR) {
-          throw (StateMachineException) new StateMachineException("Reached state ERROR unexpectedly! Expected " + Arrays.toString(states)).setUserMessage("Reached ERROR state unexpectedly!").adviseRetry();
+          throw new RuntimeException("Reached state ERROR unexpectedly! Expected " + Arrays.toString(states));
         }
       } else if (System.nanoTime() - start >= timeoutNanos) {
         break;
       }
       synchronized(_stateChangeMonitor) {
-        _stateChangeMonitor.wait(monitorTimeoutMillis);
+        try {
+          _stateChangeMonitor.wait(monitorTimeoutMillis);
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
       }
     }
     if (!Thread.currentThread().isInterrupted()) {
@@ -357,13 +347,13 @@ public class FlowInstance implements Serializable {
   }
 
 
-  public FlowInstance waitUntilDone() throws InterruptedException, StateMachineException {
+  public FlowInstance waitUntilDone() {
     this.waitForState(FlowState.WAITING_FOR_NEXT_CYCLE, FlowState.ERROR);
     return this;
   }
 
 
-  public boolean waitUntilAllOperationsAlive(final long timeoutMillis, final FlowState... states) throws InterruptedException, StateMachineException {
+  public boolean waitUntilAllOperationsAlive(final long timeoutMillis, final FlowState... states) {
     final long timeoutNanos = TimeUnit.NANOSECONDS.convert(timeoutMillis, TimeUnit.MILLISECONDS);
     final boolean infiniteLoop = timeoutMillis < 0;
     final long monitorTimeoutMillis;
@@ -379,7 +369,11 @@ public class FlowInstance implements Serializable {
         return false;
       }
       synchronized (_stateChangeMonitor) {
-        _stateChangeMonitor.wait(monitorTimeoutMillis);
+        try {
+          _stateChangeMonitor.wait(monitorTimeoutMillis);
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
       }
     }
 
@@ -387,7 +381,7 @@ public class FlowInstance implements Serializable {
   }
 
 
-  public FlowInstance waitUntilStarted() throws FlowException, InterruptedException, StateMachineException {
+  public FlowInstance waitUntilStarted() {
     this.waitForState(FlowState.STARTED);
     return this;
   }
@@ -407,18 +401,18 @@ public class FlowInstance implements Serializable {
     return inState(FlowState.ERRORING ,FlowState.ERROR, FlowState.WAITING_FOR_NEXT_CYCLE, FlowState.KILLING, FlowState.KILLED, FlowState.RETIRED, FlowState.RETIRING);
   }
 
-  void removeAllFlowState() throws InterruptedException, CoordinationException {
+  void removeAllFlowState() {
     _log.info("flow prep: deleting existing keys for flowId: " + id());
     Universe.instance().state().removeStateWithPrefix(flowStateKey());
   }
 
-  void tellAllOperationsToDie() throws InterruptedException, CoordinationException {
+  void tellAllOperationsToDie() {
     _log.info("telling all operations to die!");
     Universe.instance().state().sendMessage(flowStateKey() + "/operation_commands", "die");
   }
 
 
-  public void removeWatchers() throws FlowException, InterruptedException, CoordinationException {
+  public void removeWatchers() {
     try {
       try {
         if (this._emitPermissionWatcher != null) {
@@ -447,7 +441,7 @@ public class FlowInstance implements Serializable {
     _flow.setVersion(Integer.parseInt(snapshot.getString("flow_version")));
   };
   
-  public void killImpl(final FlowState finalState) throws CoordinationException, InterruptedException, StateMachineException, FlowException, ExecutionException {
+  public void killImpl(final FlowState finalState) {
     try {
       _log.info("beginning kill sequence...");
       if(finalState.equals(FlowState.KILLED)) {
@@ -469,7 +463,7 @@ public class FlowInstance implements Serializable {
         deadState = FlowState.ERROR;
         break;   
       default:
-        throw new StateMachineException("Invalid state sent to kill "+finalState);
+        throw new RuntimeException("Invalid state sent to kill "+finalState);
       }
 
       try {
@@ -479,7 +473,7 @@ public class FlowInstance implements Serializable {
           }
           transitionToState(dyingState);
         }
-      } catch(StateMachineException e) {
+      } catch(Exception e) {
         _log.warn("deepKill state error" + e);
       }
 
@@ -507,31 +501,6 @@ public class FlowInstance implements Serializable {
       // clean up lxc on workers
       final Set<String> workers = getWorkerIPs();
       final ArrayList<Future<Void>> killFutures = new ArrayList<>(workers.size());
-      for(final String ip : workers) {
-        killFutures.add(Utils.run(new Callable<Void>() {
-          @Override
-          public @Nullable Void call() throws SSHException {
-
-            // TODO: instead of killing lxc containers we know are dead, we should instead
-            // kill all containers we don't know are alive.  i.e. SSH into the machines, and 
-            // all containers that do not belong to the set of known flows, should be killed.
-            return null;
-
-            //                  try {
-            //                    Universe.instance().sshFactory().runCommand(ip, "lxc-stop -W -P "+lxcDir+" -n "+lxcName);
-            //                    // Sometimes containers aren't stopping properly, is it because we are rushing to destroy too fast?
-            //                    Utils.sleep(1000);
-            //                    Universe.instance().sshFactory().runCommand(ip,  "lxc-destroy -P "+lxcDir+" -n "+lxcName);
-            //                    if(finalState.equals(FlowState.KILLED)) {
-            //                      Universe.instance().sshFactory().runCommand(ip, "rm -rf " + lxcLog);
-            //                    }
-            //                  } catch (InterruptedException e) {
-            //                    /* Thread boundary, swallow */
-            //                  }
-            //                  return null;
-          }
-        }));
-      }
       try {
         for (final Future<Void> killFuture : killFutures) {
           killFuture.get();
@@ -554,19 +523,15 @@ public class FlowInstance implements Serializable {
   }
 
 
-  public void pause() throws InterruptedException, CoordinationException, FlowException, StateMachineException {
+  public void pause() {
 
     // transition to PAUSING
-    try {
-      transitionToState(FlowState.PAUSING);
-    } catch (StateMachineException e) {
-      throw new FlowException(this._flow, e);
-    }
+    transitionToState(FlowState.PAUSING);
 
     // upload snapshot
     _log.info("creating snapshot");
 
-    Utils.retryUnchecked(3, new Callable<Void>() {
+    Utils.retry(3, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         JSONObject snapshot = createSnapshot();
@@ -589,37 +554,32 @@ public class FlowInstance implements Serializable {
     waitUntilAllOperationsAlive(LocalServiceMain.OPERATION_STARTING_TIMEOUT_MS, FlowState.PAUSED);
   }
 
-  public void resume() throws InterruptedException, CoordinationException, FlowException {
+  public void resume() {
 
     Universe.instance().state().sendMessage(flowStateKey() + "/operation_commands", "resume");
 
     // apply snapshot
     applySnapshotIfExists_ThreadUnsafe();
 
-    try {
-      if (waitUntilAllOperationsAlive(LocalServiceMain.OPERATION_STARTING_TIMEOUT_MS, FlowState.STARTED, FlowState.RUNNING)){
-        transitionToState(FlowState.RUNNING);  
-      }
-    } catch (StateMachineException e) {
-      throw new FlowException(this._flow, e);
+    if (waitUntilAllOperationsAlive(LocalServiceMain.OPERATION_STARTING_TIMEOUT_MS, FlowState.STARTED, FlowState.RUNNING)){
+      transitionToState(FlowState.RUNNING);  
     }
+
   }
 
   private void applySnapshotIfExists_ThreadUnsafe() {
     // Apply a snapshot if it exists
     _log.info("checking for snapshot...");
 
-    Utils.retryUnchecked(3, new Callable<Void>() {
+    Utils.retry(3, new Callable<Void>() {
       @Override
       public Void call() {
 
-        String snapshotJSON;
-        try {
+        String snapshotJSON = null;
+        if(Universe.instance().dfsService().pathExists(dfsSnapshotKey())) {
           snapshotJSON = Universe.instance().dfsService().readFileAsString(dfsSnapshotKey());
-        } catch (IOException | S3Exception e) {
-          // TODO Auto-generated catch block
-          return null;
         }
+
         if (snapshotJSON != null) {
           _log.info("found snapshot, applying...");
           JSONObject snapshot = JSONUtil.parseObj(snapshotJSON);
@@ -629,11 +589,8 @@ public class FlowInstance implements Serializable {
           // Delete old snapshot
           _log.info("deleting old snapshot...");
 
-          try {
-            Universe.instance().dfsService().deleteFile(dfsSnapshotKey());
-          } catch (S3Exception e) {
-            return null;
-          }
+          Universe.instance().dfsService().deleteFile(dfsSnapshotKey());
+
           _log.info("deleted snapshot");
 
         }
@@ -648,7 +605,7 @@ public class FlowInstance implements Serializable {
     return Utils.prefixKey("flows/" + this.flow().getId() + "/snapshots/" + "flow");
   }
 
-  public static FlowInstance recover(byte[] data) throws FlowRecoveryException, InterruptedException {
+  public static FlowInstance recover(byte[] data) {
     throw new NotImplementedException();
     //    // Deserialize, Init
     //    FlowInstance inst = (FlowInstance) Utils.deserialize(data);
@@ -713,83 +670,78 @@ public class FlowInstance implements Serializable {
    * by Redis and we wish to reduce the network load on it. 
    * @throws InterruptedException
    */
-  public void handleWatching() throws FlowException, InterruptedException {
+  public void handleWatching() {
 
-    try {
+    ///////////
+    // WATCH FOR ASKS...
+    ///////////
 
-      ///////////
-      // WATCH FOR ASKS...
-      ///////////
-
-      // Called when an operation (sources) spins up and wants to know if it's OKAY to start emitting stuff.  See this.startNewCycle() below
-      if (_emitPermissionWatcher != null) {
-        _emitPermissionWatcher.unsubscribe();
-      }
-
-      _emitPermissionWatcher = Universe.instance().state().watchForAsk(_executor, flowStateKey() + "/emit_permission", new AskHandler() {
-        @Override
-        public Object handleAsk(String key, Object payload) {
-          synchronized(_stateMonitor) {
-            if (getFlowState() == FlowState.RUNNING) {
-              return Boolean.TRUE;
-            }
-          }
-          return Boolean.FALSE;
-        }
-      });
-
-      ///////////
-      // WATCH FOR MESSAGES...  
-      ///////////
-
-      if (_messageWatcher != null) {
-        _messageWatcher.unsubscribe();
-      }
-
-      _messageWatcher = Universe.instance().state().watchForMessage(_executor, flowStateKey(), new MessageHandler() {
-        @SuppressWarnings("unchecked")
-        @Override
-        public void handleNewMessage(final String key, final Object rawPayload) throws StateMachineException, FlowException, OperationException, CoordinationException, InterruptedException {
-
-          final OperationMessage opMessage = (OperationMessage) rawPayload;
-          final String id = opMessage.getInstanceName();
-          final String command = opMessage.getCommand();
-          final Object payload = opMessage.getMessage();
-          _log.debug("handling a message for key " + key + " : command " + command);
-
-          synchronized(this) {
-            switch (command) {
-            case "stats":
-              _instances.getOrCreate(id).updateStats((Map<String, String>) payload);
-              maybeUpdateFlowState();
-              break;
-            case "state":
-
-              _instances.getOrCreate(id).updateState((String) payload);
-              maybeUpdateFlowState();
-              break;
-            case "info":
-              _instances.getOrCreate(id).updateInfo((Map<String, Object>) payload);
-              maybeUpdateFlowState();
-              break;
-            case "errors":
-              _instances.getOrCreate(id).addRecentError((Exception) payload);
-              maybeUpdateFlowState();
-              break;
-            default:
-              _log.warn("Received unknown command: " + command);
-            }
-          }
-        }
-      });
-    } catch (CoordinationException e) {
-      throw new FlowException(_flow, e);
+    // Called when an operation (sources) spins up and wants to know if it's OKAY to start emitting stuff.  See this.startNewCycle() below
+    if (_emitPermissionWatcher != null) {
+      _emitPermissionWatcher.unsubscribe();
     }
+
+    _emitPermissionWatcher = Universe.instance().state().watchForAsk(_executor, flowStateKey() + "/emit_permission", new AskHandler() {
+      @Override
+      public Object handleAsk(String key, Object payload) {
+        synchronized(_stateMonitor) {
+          if (getFlowState() == FlowState.RUNNING) {
+            return Boolean.TRUE;
+          }
+        }
+        return Boolean.FALSE;
+      }
+    });
+
+    ///////////
+    // WATCH FOR MESSAGES...  
+    ///////////
+
+    if (_messageWatcher != null) {
+      _messageWatcher.unsubscribe();
+    }
+
+    _messageWatcher = Universe.instance().state().watchForMessage(_executor, flowStateKey(), new MessageHandler() {
+      @SuppressWarnings("unchecked")
+      @Override
+      public void handleNewMessage(final String key, final Object rawPayload) {
+
+        final OperationMessage opMessage = (OperationMessage) rawPayload;
+        final String id = opMessage.getInstanceName();
+        final String command = opMessage.getCommand();
+        final Object payload = opMessage.getMessage();
+        _log.debug("handling a message for key " + key + " : command " + command);
+
+        synchronized(this) {
+          switch (command) {
+          case "stats":
+            _instances.getOrCreate(id).updateStats((Map<String, String>) payload);
+            maybeUpdateFlowState();
+            break;
+          case "state":
+
+            _instances.getOrCreate(id).updateState((String) payload);
+            maybeUpdateFlowState();
+            break;
+          case "info":
+            _instances.getOrCreate(id).updateInfo((Map<String, Object>) payload);
+            maybeUpdateFlowState();
+            break;
+          case "errors":
+            _instances.getOrCreate(id).addRecentError((Exception) payload);
+            maybeUpdateFlowState();
+            break;
+          default:
+            _log.warn("Received unknown command: " + command);
+          }
+        }
+      }
+    });
   }  
 
 
 
-  public FlowInstance startNewCycle() throws InterruptedException, FlowException {
+  public FlowInstance startNewCycle() {
     synchronized(_stateMonitor) {
       // we have a 'pull' architecture here rather than a 'push'. (that is, the operation instances
       // continually ask us if it's okay to start running, rather than us telling them to start)
@@ -797,29 +749,26 @@ public class FlowInstance implements Serializable {
       // and it's easier to have them ask us for permission to start, rather than us synchronizing
       // a push-system with them.
       _log.info("starting new cycle: " + id());
-      
+
       // make sure bufferSinks are notified regardless of outcome
       _bufferNotified = false;
-      
-      try {
-        transitionToState(FlowState.RUNNING);
-      } catch (StateMachineException e) {
-        throw new FlowException(_flow, e);
-      }
+
+      transitionToState(FlowState.RUNNING);
+
       return this;  // for chaining
     }
   }
 
 
 
-  public void kill() throws FlowException, InterruptedException, CoordinationException, StateMachineException, ExecutionException {
+  public void kill() {
     killImpl(FlowState.KILLED);
     _instances.clear();
   }
 
 
 
-  public void retire() throws FlowException, InterruptedException, CoordinationException, StateMachineException, ExecutionException {
+  public void retire() {
     killImpl(FlowState.RETIRED);
     _instances.clear();
   }

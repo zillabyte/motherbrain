@@ -22,7 +22,7 @@ public interface FlowService {
    * @throws FlowCompilationException
    * @throws Exception 
    */
-  @NonNull FlowInstance registerApp(App app) throws Exception;
+  @NonNull FlowInstance registerApp(App app);
   
   
   /**
@@ -33,13 +33,13 @@ public interface FlowService {
    * @throws FlowCompilationException
    * @throws APIException
    */
-  void registerComponent(Component comp) throws InterruptedException, FlowCompilationException, APIException;
+  void registerComponent(Component comp) throws APIException;
 
   void init();
 
   void shutDown();
 
-  void killFlow(FlowInstance flow) throws InterruptedException, FlowException;
+  void killFlow(FlowInstance flow);
 
 //  void refreshFlowState(FlowInstance flowInstance);
 

@@ -8,40 +8,35 @@ import com.zillabyte.motherbrain.top.MotherbrainException;
  * @author jake
  *
  */
-public class OperationException extends MotherbrainException {
+public class LoopException extends MotherbrainException {
 
   private static final long serialVersionUID = -1014775321731054176L;
   
   void setOperation(Operation op) {
-    this._internalMessagePrefix = "[f" + op.topFlowId() + "-" + op.instanceName() + "]: ";
+    this._messagePrefix = "[f" + op.topFlowId() + "-" + op.instanceName() + "]: ";
   }
   
   // For mock only
-  public OperationException(String s) {
+  public LoopException(String s) {
     super(s);
   }
-
-  public OperationException(Operation op) {
-    super();
-    setOperation(op);
-  }
   
-  public OperationException(Operation op, Throwable ex) {
-    super(ex);
+  public LoopException(Operation op, Throwable ex) {
+    super(ex.getMessage(), ex);
     setOperation(op);
   }
 
-  public OperationException(Operation op, String string) {
+  public LoopException(Operation op, String string) {
     super(string);
     setOperation(op);
   }
   
-  public OperationException(Operation op, String string, Throwable ex) {
-    super(string,ex);
+  public LoopException(Operation op, String string, Throwable ex) {
+    super(string, ex);
     setOperation(op);
   }
   
-  public static class MockOperationException extends OperationException {
+  public static class MockOperationException extends LoopException {
     /**
      * 
      */

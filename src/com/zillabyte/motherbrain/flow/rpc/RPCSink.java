@@ -9,10 +9,9 @@ import org.apache.log4j.Logger;
 import com.google.common.base.Throwables;
 import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.collectors.coordinated.BatchedTuple;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.flow.operations.Sink;
 import com.zillabyte.motherbrain.flow.rpc.queues.OutputQueue;
-import com.zillabyte.motherbrain.top.MotherbrainException;
 import com.zillabyte.motherbrain.universe.Universe;
 import com.zillabyte.motherbrain.utils.Utils;
 
@@ -39,7 +38,7 @@ public class RPCSink extends Sink {
    * 
    */
   @Override
-  public void prepare() throws InterruptedException {
+  public void prepare() {
     _outputQueue = Universe.instance().rpcQueueFactory().getOutputQueue(this); // appears to be necessary for tests to pass even if already done in constructor
   }
   
@@ -48,7 +47,7 @@ public class RPCSink extends Sink {
    * 
    */
   @Override
-  protected void process(MapTuple t) throws InterruptedException, MotherbrainException {
+  protected void process(MapTuple t) throws LoopException {
     
     // Init 
     log.debug("rpc sinking: " + t);
@@ -62,7 +61,11 @@ public class RPCSink extends Sink {
       _sinks.put(id, new LinkedBlockingQueue<MapTuple>());
     } 
     LinkedBlockingQueue<MapTuple> sink = _sinks.get(id);
-    sink.put(t);
+    try {
+      sink.put(t);
+    } catch (InterruptedException e) {
+      throw new LoopException(this, e);
+    }
   }
   
   
@@ -90,7 +93,7 @@ public class RPCSink extends Sink {
 
     try {
       _outputQueue.sendResponse(response);
-    } catch (OperationException e) {
+    } catch (LoopException e) {
       Throwables.propagate(e);
     } 
   }

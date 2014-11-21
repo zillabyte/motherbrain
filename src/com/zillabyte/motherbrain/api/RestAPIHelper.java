@@ -56,13 +56,13 @@ public class RestAPIHelper {
         log.info("Server responded with 500. Retrying in a few seconds...(" + retries + ")");
         Utils.sleep(RETRY_SLEEP_MS);
       } else {
-         throw (APIException) new APIException("Failed : HTTP error code : " + response.getStatus() + " " + response.getEntity(String.class)).adviseRetry();
+         throw new APIException("Failed : HTTP error code : " + response.getStatus() + " " + response.getEntity(String.class));
       }
     } while(retries < MAX_RETRIES);
  
     final String output = response.getEntity(String.class);
     if (retries == MAX_RETRIES) {
-      throw (APIException) new APIException("Failed: max retries exceeded: response from API: " + output).adviseRetry();
+      throw new APIException("Failed: max retries exceeded: response from API: " + output);
     }
 
     log.debug("get returned: " + output);
@@ -70,7 +70,7 @@ public class RestAPIHelper {
     JSONObject ret = JSONUtil.parseObj(output);
 
     if (ret == null) {
-      throw (APIException) new APIException("Failed: returned response body was null for output: "+output).adviseRetry();
+      throw new APIException("Failed: returned response body was null for output: "+output);
     }
 
     log.info("done: " + url);
@@ -110,31 +110,31 @@ public class RestAPIHelper {
           // It's a formatted message.. pass it on to the user... 
           ret = JSONUtil.parseObj(output);
           if (ret.containsKey("error_message")) {
-            throw ((APIException) new APIException("API error").setInternalMessage(ret.getString("error_message")).setUserMessage(ret.getString("error_message")));
+            throw new APIException(ret.getString("error_message"));
           }
           
         } catch(JSONException ex) {
           Utils.sleep(RETRY_SLEEP_MS);
         }
       } else {
-        throw (APIException) new APIException("Failed : HTTP error code : " + response.getStatus()).adviseRetry();
+        throw new APIException("Failed : HTTP error code : " + response.getStatus());
       }
     } while (retries < MAX_RETRIES);
 
     if (retries == MAX_RETRIES) {
-      throw (APIException) new APIException("Failed: max retries exceeded").adviseRetry();
+      throw new APIException("Failed: max retries exceeded.");
     }
 
     String output = response.getEntity(String.class);
     log.info("post returned: " + output);
     JSONObject ret = JSONUtil.parseObj(output);
     if (ret == null) // Should not be NULL, it's just a string conversion.
-      throw (APIException) new APIException("Failed: returned response body was null for output: "+output).adviseRetry();
+      throw new APIException("Failed: returned response body was null for output: "+output);
     return ret;
     
   }
   
-  public static JSONObject put(String path, String body, String authToken) throws APIException, InterruptedException {
+  public static JSONObject put(String path, String body, String authToken) throws APIException {
     Client client = Client.create();
     String url = "http://" + getHost() + ":" + getPort() + path;
 
@@ -158,16 +158,20 @@ public class RestAPIHelper {
         break;
       } else if (response.getStatus() >= 500) {
         log.info("Server responded with 500. Retrying in a few seconds...(" + retries + ")");
-        Thread.sleep(RETRY_SLEEP_MS);
+        try {
+          Thread.sleep(RETRY_SLEEP_MS);
+        } catch (InterruptedException e) {
+          throw new APIException(e);
+        }
       } else {
-        throw (APIException) new APIException("Failed : HTTP error code : " + response.getStatus()).adviseRetry();
+        throw new APIException("Failed : HTTP error code : " + response.getStatus());
       }
       retries++;
 
     } while (retries < MAX_RETRIES);
 
     if (retries == MAX_RETRIES) {
-      throw (APIException) new APIException("Failed: max retries exceeded").adviseRetry();
+      throw new APIException("Failed: max retries exceeded.");
     }
 
     String output = response.getEntity(String.class);
@@ -175,7 +179,7 @@ public class RestAPIHelper {
     
     JSONObject ret = JSONUtil.parseObj(output);
     if (ret == null) // Should not be NULL
-      throw (APIException) new APIException("Failed: returned response body was null for output: "+output).adviseRetry();
+      throw new APIException("Failed: returned response body was null for output: "+output);
     return ret;
     
   }

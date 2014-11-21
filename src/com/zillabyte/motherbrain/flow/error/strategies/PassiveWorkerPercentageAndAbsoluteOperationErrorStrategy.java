@@ -5,11 +5,8 @@ import java.util.concurrent.TimeoutException;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.log4j.Logger;
 
-import com.zillabyte.motherbrain.coordination.CoordinationException;
-import com.zillabyte.motherbrain.flow.StateMachineException;
-import com.zillabyte.motherbrain.flow.collectors.coordinated.MaxIterationsExceededException;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.flow.operations.Operation;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
 import com.zillabyte.motherbrain.flow.operations.OperationLogger;
 import com.zillabyte.motherbrain.flow.operations.multilang.operations.MultiLangOperation;
 import com.zillabyte.motherbrain.reactor.lightweight.ProcessTimeoutException;
@@ -32,7 +29,6 @@ public class PassiveWorkerPercentageAndAbsoluteOperationErrorStrategy implements
   private long _maxErrorCount = Config.getOrDefault("operation.errors.max.error.count", 100L);
   private float _maxErrorPercentage = Config.getOrDefault("operation.errors.max.error.percentage", 0.5F);
   private long _loopErrors = 0L;
-  private Throwable _fatalError = null;
   
   
   /***
@@ -42,22 +38,10 @@ public class PassiveWorkerPercentageAndAbsoluteOperationErrorStrategy implements
   public PassiveWorkerPercentageAndAbsoluteOperationErrorStrategy(Operation op) {
     _op = op;
   }
-
-  
-  
-  /***
-   * 
-   * @return 
-   * @throws OperationException
-   */
-  @Override
-  public Throwable maybeGetFatalError() {
-    return this._fatalError;
-  }
   
   
   @Override
-  public synchronized void handleFatalError(Throwable error) throws OperationException, FakeLocalException {
+  public synchronized void handleFatalError(Throwable error) throws FakeLocalException {
     
     // Init
     _log.error("fatalError: " + error + " [stacktrace]: " + ExceptionUtils.getFullStackTrace(error));
@@ -68,7 +52,7 @@ public class PassiveWorkerPercentageAndAbsoluteOperationErrorStrategy implements
       final String state = _op.getState();
       if(!(state.equalsIgnoreCase("KILLING") || state.equalsIgnoreCase("KILLED"))) _op.transitionToState("ERROR", true);
       
-    } catch (InterruptedException | StateMachineException | TimeoutException | CoordinationException e) {
+    } catch (Exception e) {
       _log.warn("An error occurred when trying to transition to state ERROR: " + e.getMessage());
     }
     
@@ -84,7 +68,7 @@ public class PassiveWorkerPercentageAndAbsoluteOperationErrorStrategy implements
         _op.transitionToState("ERROR", true);
         _op.logger().writeLog("Heartbeat is dead for " + _op.instanceName(), OperationLogger.LogPriority.ERROR);
       }
-    } catch (StateMachineException | CoordinationException | TimeoutException e) {
+    } catch (Exception e) {
       _log.warn("An error occurred when trying to transition to state ERROR: " + e.getMessage());
     }
     
@@ -102,24 +86,14 @@ public class PassiveWorkerPercentageAndAbsoluteOperationErrorStrategy implements
    * 
    */
   @Override
-  public synchronized void handleLoopError(Throwable error) throws OperationException, FakeLocalException {
+  public synchronized void handleLoopError(LoopException error) throws FakeLocalException {
 
     // Init
     _loopErrors++;
     _log.warn("loopError (" + _loopErrors + "): " + error + " [stacktrace]: " + ExceptionUtils.getFullStackTrace(error));
     
     // Some errors we always want to propogate... 
-    if (error instanceof InterruptedException) {
-      
-      // Do nothing for an interrupt -- it could be us trying to shut down or just that the 
-      // current loop is taking too long. In both cases, the calling thread will know clean
-      // things up on the following call.
-      
-    } else if (error instanceof MaxIterationsExceededException) {
-      
-      throw (OperationException) new OperationException(_op, error).setUserMessage("Maximum number of loop-back iterations exceeded in \"" + _op.instanceName() + "\".");
-      
-    } else if (Utils.isCause(error, ProcessTimeoutException.class)) {
+    if (Utils.isCause(error, ProcessTimeoutException.class)) {
       
       // This is taking too long! 
       if (this._op instanceof MultiLangOperation) {
@@ -138,12 +112,8 @@ public class PassiveWorkerPercentageAndAbsoluteOperationErrorStrategy implements
       float errorPercentage = (float)_loopErrors / (float)loopCalls;
       if (errorPercentage > _maxErrorPercentage) {
         _op.logger().error("Operation instance "+_op.operationId()+" has exceeded "+_maxErrorPercentage+"% error rate on tuples. If all instances of this operation exceed this threshold, the flow will be shut down.");
-        try {
-          if (_op.inState("SUSPECT", "KILLING", "KILLED", "ERROR", "ERRORING") == false) {
-            _op.transitionToState("SUSPECT", true);
-          }
-        } catch (StateMachineException | CoordinationException | TimeoutException e) {
-          throw (OperationException) new OperationException(_op, e).setUserMessage("Error transitioning to SUSPECT state.");
+        if (_op.inState("SUSPECT", "KILLING", "KILLED", "ERROR", "ERRORING") == false) {
+          _op.transitionToState("SUSPECT", true);
         }
       }
     }
@@ -151,10 +121,8 @@ public class PassiveWorkerPercentageAndAbsoluteOperationErrorStrategy implements
     // Have we exceeded absolute count? 
     if (_maxErrorCount > 0 && _maxErrorCount < _loopErrors) {
       _op.logger().error("Operation instance "+_op.operationId()+" has exceeded "+_maxErrorCount+" loop errors. If all instances of this operation exceed this threshold, the flow will be shut down.");
-      try {
+      if (_op.inState("SUSPECT", "KILLING", "KILLED", "ERROR", "ERRORING") == false) {
         _op.transitionToState("SUSPECT", true);
-      } catch (StateMachineException | CoordinationException | TimeoutException e) {
-        throw (OperationException) new OperationException(_op, e).setUserMessage("Error transitioning to SUSPECT state.");
       }
     }
     

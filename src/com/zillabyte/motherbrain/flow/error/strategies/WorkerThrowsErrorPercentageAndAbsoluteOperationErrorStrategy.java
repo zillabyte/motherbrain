@@ -1,17 +1,12 @@
 package com.zillabyte.motherbrain.flow.error.strategies;
 
 import java.text.MessageFormat;
-import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.log4j.Logger;
 
-import com.google.common.base.Throwables;
-import com.zillabyte.motherbrain.coordination.CoordinationException;
-import com.zillabyte.motherbrain.flow.StateMachineException;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.flow.operations.Operation;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
-import com.zillabyte.motherbrain.top.MotherbrainException;
 import com.zillabyte.motherbrain.universe.Config;
 import com.zillabyte.motherbrain.utils.Utils;
 
@@ -31,7 +26,6 @@ public class WorkerThrowsErrorPercentageAndAbsoluteOperationErrorStrategy implem
   private long _maxErrorCount = Config.getOrDefault("operation.errors.max.error.count", 100L);
   private float _maxErrorPercentage = Config.getOrDefault("operation.errors.max.error.percentage", 0.5F);
   private long _loopErrors = 0L;
-  private Throwable _fatalError = null;
   
   
   /***
@@ -44,49 +38,19 @@ public class WorkerThrowsErrorPercentageAndAbsoluteOperationErrorStrategy implem
   }
 
   
-  
-  /***
-   * 
-   * @return 
-   * @throws OperationException
-   */
   @Override
-  public Throwable maybeGetFatalError() {
-    return this._fatalError;
-  }
-  
-  
-  /***
-   * 
-   * @param error
-   * @throws OperationException
-   * @throws FakeLocalException
-   */
-  private void throwError(OperationException error) throws OperationException, FakeLocalException {
-    if (THROW_FAKE_EXCEPTIONS) {
-      throw new FakeLocalException(error); 
-    } else {
-      throw error;
-    }
-  }
-  
-  
-  @Override
-  public synchronized void handleFatalError(Throwable error) throws OperationException, FakeLocalException {
+  public synchronized void handleFatalError(Throwable error) throws FakeLocalException {
     
     // Init 
     _log.error("fatalError: " + error + " [stacktrace]: " + ExceptionUtils.getFullStackTrace(error));
-    _op.logger().error( MotherbrainException.getRootUserMessage(error, "Fatal internal cluster error") );
-    _fatalError = error;
     
     try {
       
       _op.reportError(error);
       final String state = _op.getState();
       if(!(state.equalsIgnoreCase("KILLING") || state.equalsIgnoreCase("KILLED"))) _op.transitionToState("ERROR", false);
-      throwError(new OperationException(_op, error));
       
-    } catch (InterruptedException | StateMachineException | TimeoutException | CoordinationException e) {
+    } catch (Exception e) {
       e.printStackTrace();
     }
     
@@ -101,24 +65,11 @@ public class WorkerThrowsErrorPercentageAndAbsoluteOperationErrorStrategy implem
    * 
    */
   @Override
-  public synchronized void handleLoopError(Throwable error) throws OperationException, FakeLocalException {
+  public synchronized void handleLoopError(LoopException error) throws FakeLocalException {
 
     // Init
     _loopErrors++;
     _log.error("loopError (" + _loopErrors + "): " + error + " [stacktrace]: " + ExceptionUtils.getFullStackTrace(error));
-    
-    // Make sure we propagate fatal errors
-    if (_fatalError != null) {
-      handleFatalError(_fatalError);
-    }
-    
-    // Some errors we always want to propogate... 
-    if (error instanceof InterruptedException) {
-      Throwables.propagate(error);
-    }
-    
-    // Log to the user... 
-    _op.logger().error( MotherbrainException.getRootUserMessage(error, "Internal cluster error") );
 
     // Have we seen enough errors?
     long  loopCalls = _op.getLoopCalls();
@@ -127,15 +78,13 @@ public class WorkerThrowsErrorPercentageAndAbsoluteOperationErrorStrategy implem
     if (loopCalls > _minLoopCalls ) {      
       float errorPercentage = (float)_loopErrors / (float)loopCalls;
       if (errorPercentage > _maxErrorPercentage) {
-        _fatalError = new ErrorThresholdExceededException(this._op, error).setUserMessage("Aborting because more than " + MessageFormat.format("{0,number,#.##%}", errorPercentage)  +  " of iterations are producing errors");
-        throwError((ErrorThresholdExceededException)_fatalError);
+        throw new RuntimeException("Aborting because more than " + MessageFormat.format("{0,number,#.##%}", errorPercentage)  +  " of iterations are producing errors");
       }
     }
       
     // Have we exceeded absolute count? 
     if (_maxErrorCount > 0 && _maxErrorCount < _loopErrors) {
-      _fatalError = new ErrorThresholdExceededException(this._op, error).setUserMessage("Aborting because " + _loopErrors + " errors has exceeded the allowed threshold");
-      throwError((ErrorThresholdExceededException)_fatalError);
+      throw new RuntimeException("Aborting because " + _loopErrors + " errors has exceeded the allowed threshold");
     }
     
     // Report the error
@@ -158,7 +107,7 @@ public class WorkerThrowsErrorPercentageAndAbsoluteOperationErrorStrategy implem
 
 
   @Override
-  public void handleHeartbeatDeath() throws OperationException, FakeLocalException {
+  public void handleHeartbeatDeath() throws FakeLocalException {
     handleFatalError(new Throwable("heartbeat died!"));
   }
     

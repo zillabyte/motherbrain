@@ -8,7 +8,6 @@ import org.apache.commons.lang.NotImplementedException;
 
 import com.zillabyte.motherbrain.flow.Fields;
 import com.zillabyte.motherbrain.flow.MapTuple;
-import com.zillabyte.motherbrain.flow.aggregation.AggregationException;
 import com.zillabyte.motherbrain.flow.aggregation.AggregationKey;
 import com.zillabyte.motherbrain.flow.aggregation.AggregationStoreWrapper;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
@@ -16,8 +15,6 @@ import com.zillabyte.motherbrain.flow.collectors.coordinated.BatchedTuple;
 import com.zillabyte.motherbrain.flow.config.OperationConfig;
 import com.zillabyte.motherbrain.flow.error.strategies.FakeLocalException;
 import com.zillabyte.motherbrain.flow.graph.Connection;
-import com.zillabyte.motherbrain.relational.MissingFieldException;
-import com.zillabyte.motherbrain.top.MotherbrainException;
 import com.zillabyte.motherbrain.universe.Universe;
 import com.zillabyte.motherbrain.utils.Log4jWrapper;
 import com.zillabyte.motherbrain.utils.Utils;
@@ -94,53 +91,49 @@ public class Join extends AggregationOperation {
 
   /**
    * @throws InterruptedException 
-   * @throws OperationException 
+   * @throws LoopException 
    * @throws OperationDeadException **
    * 
    */
   @Override
-  public void handleEmit(Object batch, Integer aggStoreKey) throws InterruptedException, OperationException, OperationDeadException {
-    try {
-     
-      // Init
-      _log.info("Aggregating all groups..");
-      final Iterator<AggregationKey> iter;
-      switch(this._joinType) {
-      case INNER:
-        /* fall through */
-      case LEFT:
-        iter = this._lhsStore.keyIterator(iterationStoreKeyPrefix(batch, aggStoreKey));
-        break;
-      case RIGHT:
-        iter = this._rhsStore.keyIterator(iterationStoreKeyPrefix(batch, aggStoreKey));
-        break;
-      case OUTER:
-        // See below
-        throw (OperationException) new OperationException(this, new NotImplementedException()).setAllMessages("Outer join is not yet implemented.");
-      default:
-        throw (OperationException) new OperationException(this).setAllMessages("Unknown join type: "+this._joinType);
-      }
-  
-      while(iter.hasNext()) {
-        AggregationKey key = iter.next();
-        performJoin(iterationStoreKeyPrefix(batch, aggStoreKey), key);
-      }
-  
-      // Done
-      _log.info("Aggregating all groups done.");
-    } catch(AggregationException e) {
-      throw new OperationException(this, e);
+  public void handleEmit(Object batch, Integer aggStoreKey) throws LoopException {
+
+    // Init
+    _log.info("Aggregating all groups..");
+    final Iterator<AggregationKey> iter;
+    switch(this._joinType) {
+    case INNER:
+      /* fall through */
+    case LEFT:
+      iter = this._lhsStore.keyIterator(iterationStoreKeyPrefix(batch, aggStoreKey));
+      break;
+    case RIGHT:
+      iter = this._rhsStore.keyIterator(iterationStoreKeyPrefix(batch, aggStoreKey));
+      break;
+    case OUTER:
+      // See below
+      throw (LoopException) new LoopException(this, "Outer join is not yet implemented.");
+    default:
+      throw (LoopException) new LoopException(this, "Unknown join type: "+this._joinType);
     }
+
+    while(iter.hasNext()) {
+      AggregationKey key = iter.next();
+      performJoin(iterationStoreKeyPrefix(batch, aggStoreKey), key);
+    }
+
+    // Done
+    _log.info("Aggregating all groups done.");
   }
 
-  
+
   /***
    * 
    * @param lhs
    * @param rhs
    */
   private final MapTuple joinTuples(MapTuple lhs, MapTuple rhs) {
-    
+
     // Create the new tuple
     MapTuple joinedTuple = new MapTuple();
     if (lhs != null) joinedTuple.values().putAll(lhs.values());
@@ -176,7 +169,7 @@ public class Join extends AggregationOperation {
   
   
   @Override
-  public void onSetExpectedFields() throws OperationException {
+  public void onSetExpectedFields() throws LoopException {
     final String lhsStream = this.lhsPrevConnection().streamName();
     final String rhsStream = this.rhsPrevConnection().streamName();
     /*
@@ -194,11 +187,11 @@ public class Join extends AggregationOperation {
    * 
    * @param key
    * @throws InterruptedException 
-   * @throws OperationException 
+   * @throws LoopException 
    * @throws OperationDeadException 
    * @throws AggregationException 
    */
-  private synchronized void performJoin(String fullBatchName, AggregationKey key) throws InterruptedException, OperationException, OperationDeadException, AggregationException {
+  private synchronized void performJoin(String fullBatchName, AggregationKey key) throws LoopException {
     try {
       // Init
       _log.info("beginning join for: " + key);
@@ -296,9 +289,9 @@ public class Join extends AggregationOperation {
           
         }
         
-      } catch (MotherbrainException ex) {
+      } catch (LoopException ex) {
         handleLoopError(ex);
-      } catch(Throwable e) {
+      } catch(Exception e) {
         handleFatalError(e);
       } finally {
         // Tell the store we can release it's state
@@ -317,13 +310,13 @@ public class Join extends AggregationOperation {
 
   /**
    * @throws InterruptedException 
-   * @throws OperationException
+   * @throws LoopException
    * @throws MissingFieldException
    * @throws AggregationException 
    * 
    */
   @Override
-  public void handleConsume(Object batch, MapTuple tuple, String sourceStream, OutputCollector c) throws InterruptedException, MotherbrainException {
+  public void handleConsume(Object batch, MapTuple tuple, String sourceStream, OutputCollector c) throws LoopException {
     // Determine what stream we're working with... 
     if (sourceStream.equalsIgnoreCase(this._lhsStream)) {
       // LHS
@@ -338,7 +331,7 @@ public class Join extends AggregationOperation {
       }
       this._rhsStore.addToGroup(storeKeyPrefix(batch), this.getKey(this._rhsGroupFields, tuple), tuple);
     } else {
-      throw new OperationException(this, "unknown stream: " + sourceStream).setUserMessage("The stream '"+sourceStream+"' does not exist for the operation '"+namespaceName()+"'."); 
+      throw new LoopException(this, "The stream '"+sourceStream+"' does not exist for the operation '"+namespaceName()+"'."); 
     }
   }
 
@@ -368,7 +361,7 @@ public class Join extends AggregationOperation {
         return c;
       }
     }
-    throw new IllegalStateException("cannot find join stream!");
+    throw new RuntimeException("Cannot find join stream!");
   }
   
   
@@ -378,12 +371,12 @@ public class Join extends AggregationOperation {
         return c;
       }
     }
-    throw new IllegalStateException("cannot find join stream!");
+    throw new RuntimeException("Cannot find join stream!");
   }
 
 
   @Override
-  public Operation prevNonLoopOperation() throws OperationException {
-    throw new OperationException(this, "the caller must special-case for joins");
+  public Operation prevNonLoopOperation() {
+    throw new RuntimeException("The caller must special-case for joins");
   }
 }

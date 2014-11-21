@@ -5,11 +5,8 @@ import java.util.concurrent.TimeoutException;
 
 import org.eclipse.jdt.annotation.NonNull;
 
-import com.zillabyte.motherbrain.coordination.CoordinationException;
 import com.zillabyte.motherbrain.flow.Fields;
-import com.zillabyte.motherbrain.flow.FlowStateException;
 import com.zillabyte.motherbrain.flow.MapTuple;
-import com.zillabyte.motherbrain.flow.StateMachineException;
 import com.zillabyte.motherbrain.flow.StateMachineHelper;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.error.strategies.FakeLocalException;
@@ -48,31 +45,23 @@ public abstract class Sink extends Operation implements ProcessableOperation {
   }
 
   @Override
-  public void prePrepare() throws InterruptedException, OperationException {
-    try {
-      transitionToState(SinkState.STARTING.toString(), true);
-    } catch (StateMachineException | TimeoutException | CoordinationException e) {
-      throw new OperationException(this, e);
-    }
+  public void prePrepare() {
+    transitionToState(SinkState.STARTING.toString(), true);
   }
   
   @Override
-  public final void postPrepare() throws InterruptedException, OperationException {
-    try {
-      transitionToState(SinkState.STARTED.toString(), true);
-    } catch (StateMachineException | TimeoutException | CoordinationException e) {
-      throw new OperationException(this, e);
-    }
+  public final void postPrepare() {
+    transitionToState(SinkState.STARTED.toString(), true);
   }
   
   /***
    * 
    * @param t
    * @throws InterruptedException 
-   * @throws OperationException 
+   * @throws LoopException 
    * @throws OperationDeadException 
    */
-  public final void handleProcess(final MapTuple t) throws InterruptedException, OperationException, OperationDeadException {
+  public final void handleProcess(final MapTuple t) {
     try {
       
       switch(_state) {
@@ -95,7 +84,7 @@ public abstract class Sink extends Operation implements ProcessableOperation {
 
         // Ensure we're alive..
         if (isAlive() == false) {
-          throw new OperationDeadException(Sink.this, "The operation is not alive.");
+          throw new RuntimeException("The operation is not alive.");
         }
 
         // process
@@ -126,17 +115,17 @@ public abstract class Sink extends Operation implements ProcessableOperation {
       default:
         
         // This should never be reached.
-        throw new FlowStateException(Sink.this, "don't know how to handle state: " + _state);
+        throw new RuntimeException("Unknown sink state: " + _state);
         
       }
-    } catch(InterruptedException e) {
-      // Continue processing...
-    } catch (TimeoutException e) {
-      handleLoopError(e);
-    } catch (MotherbrainException e) {
-      handleFatalError(e);
+    
     } catch(FakeLocalException e) {
       e.printAndWait();
+    } catch (LoopException e) {
+      System.err.println("LOOP EXCEPTION CAUGHT");
+      handleLoopError(e);
+    } catch (Exception e) {
+      handleFatalError(e);
     }
     return;
   }
@@ -144,34 +133,25 @@ public abstract class Sink extends Operation implements ProcessableOperation {
   
   /***
    * 
-   * @throws OperationException
+   * @throws LoopException
    */
   @Override
-  public void handlePause() throws OperationException {
+  public void handlePause() {
     // Sinks pause when they IDLE during the PAUSING state
     _log.warn("pausing sink");
-
-    try {
-      if(!getState().equalsIgnoreCase("ERROR")) transitionToState("PAUSING");
-    } catch (StateMachineException | CoordinationException | TimeoutException e) {
-      _log.warn("An error occured while trying to resume "+e.getMessage());
-    }
+    if(!getState().equalsIgnoreCase("ERROR")) transitionToState("PAUSING");
   }
 
 
   /***
    * 
-   * @throws OperationException
+   * @throws LoopException
    */
   @Override
-  public void handleResume() throws OperationException {
+  public void handleResume() {
 
     // Resume the operation
-    try {
-      if(!getState().equalsIgnoreCase("ERROR")) transitionToState("ACTIVE");
-    } catch (StateMachineException | CoordinationException | TimeoutException e) {
-      _log.warn("An error occured while trying to resume "+e.getMessage());
-    }
+    if(!getState().equalsIgnoreCase("ERROR")) transitionToState("ACTIVE");
 
   }
 
@@ -179,17 +159,12 @@ public abstract class Sink extends Operation implements ProcessableOperation {
    * 
    */
   @Override
-  public void handleIdleDetected() throws InterruptedException, OperationException {
-
-    try {
-      if (_state == SinkState.PAUSING) {
-        transitionToState(SinkState.PAUSED.toString(), true);
-      }
-      else if (_state == SinkState.ACTIVE || _state == SinkState.SUSPECT || _state == SinkState.STARTED)  {
-        transitionToState(SinkState.IDLE.toString(), true);
-      }
-    } catch (StateMachineException | TimeoutException | CoordinationException e) {
-      throw new OperationException(this, e);
+  public void handleIdleDetected() {
+    if (_state == SinkState.PAUSING) {
+      transitionToState(SinkState.PAUSED.toString(), true);
+    }
+    else if (_state == SinkState.ACTIVE || _state == SinkState.SUSPECT || _state == SinkState.STARTED)  {
+      transitionToState(SinkState.IDLE.toString(), true);
     }
   }
 
@@ -210,14 +185,14 @@ public abstract class Sink extends Operation implements ProcessableOperation {
    * @throws TimeoutException
    * @throws StateMachineException
    */
-  public synchronized void transitionToState(SinkState newState, boolean transactional) throws CoordinationException, TimeoutException, StateMachineException {
+  public synchronized void transitionToState(SinkState newState, boolean transactional) {
     SinkState oldState = _state;
     _state = StateMachineHelper.transition(_state, newState);
     if(_state != oldState) notifyOfNewState(newState.toString(), transactional);
   }
   
   @Override
-  public synchronized void transitionToState(String newState, boolean transactional) throws CoordinationException, TimeoutException, StateMachineException {
+  public synchronized void transitionToState(String newState, boolean transactional) {
     transitionToState(SinkState.valueOf(newState), transactional); 
   }
 

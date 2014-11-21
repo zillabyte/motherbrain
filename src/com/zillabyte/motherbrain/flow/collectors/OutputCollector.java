@@ -6,17 +6,16 @@ import java.util.Set;
 import com.google.common.collect.SetMultimap;
 import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.collectors.coordinated.ObserveIncomingTupleAction;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.flow.operations.Operation;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
-import com.zillabyte.motherbrain.relational.DefaultStreamException;
 
 public interface OutputCollector {
 
-  public void emit(String streamName, MapTuple t) throws OperationException;
-  public void emit(MapTuple t) throws OperationException;
+  public void emit(String streamName, MapTuple t) throws LoopException;
+  public void emit(MapTuple t) throws LoopException;
   
   public void observeIncomingTuple(MapTuple tuple);
-  public void onAfterTuplesEmitted() throws OperationException;
+  public void onAfterTuplesEmitted() throws LoopException;
   
   public void resetCounter();
   public long getCounter();
@@ -25,12 +24,12 @@ public interface OutputCollector {
   
   public void configure(Object context);
   
-  public String getDefaultStream() throws DefaultStreamException;
+  public String getDefaultStream();
   
 
   public void emitDirect(Integer taskId, String streamId, List<?> rawTuple);
  
-  public List<Integer> emitAndGetTasks(String streamName, MapTuple t) throws OperationException;
+  public List<Integer> emitAndGetTasks(String streamName, MapTuple t) throws LoopException;
 
   public Integer getThisTask(Object context);
 
@@ -40,8 +39,8 @@ public interface OutputCollector {
   public Set<Integer> getAdjacentDownStreamTasks();
   public Set<Integer> getAdjacentUpStreamNonLoopTasks();
   
-  public ObserveIncomingTupleAction observePreQueuedCoordTuple(Object tuple, Integer originTask) throws OperationException;
-  public ObserveIncomingTupleAction observePostQueuedCoordTuple(Object tuple, Integer sourceTask) throws OperationException;
+  public ObserveIncomingTupleAction observePreQueuedCoordTuple(Object tuple, Integer originTask) throws LoopException;
+  public ObserveIncomingTupleAction observePostQueuedCoordTuple(Object tuple, Integer sourceTask) throws LoopException;
   
   public long getConsumeCount();
   public long getEmitCount();

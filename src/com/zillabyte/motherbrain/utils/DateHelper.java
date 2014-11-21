@@ -82,9 +82,13 @@ public class DateHelper {
   }
 
   
-  public static long parseRubyDate(String s) throws ParseException {
+  public static long parseRubyDate(String s) {
     Matcher m = rubyDatePattern.matcher(s);
-    return rubyDateFormat.parse(m.group()).getTime();
+    try {
+      return rubyDateFormat.parse(m.group()).getTime();
+    } catch (ParseException e) {
+      throw new RuntimeException(e);
+    }
   }
   
 //  public static long maybeParseRubyDate(String s) {
@@ -154,9 +158,13 @@ public class DateHelper {
     timestampFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
   }
   
-  public static Date parseTimestamp(String string) throws ParseException {
-    Date d = timestampFormat.parse(string.trim());
-    return d;
+  public static Date parseTimestamp(String string) {
+    try {
+      Date d = timestampFormat.parse(string.trim());
+      return d;
+    } catch (ParseException e) {
+      throw new RuntimeException(e);
+    }
   }
   
   public static String toTimestamp(Date d) {

@@ -1,6 +1,5 @@
 package com.zillabyte.motherbrain.flow.operations.multilang.builder;
 
-import com.zillabyte.motherbrain.container.ContainerException;
 import com.zillabyte.motherbrain.container.ContainerWrapper;
 import com.zillabyte.motherbrain.flow.config.FlowConfig;
 import com.zillabyte.motherbrain.flow.operations.OperationLogger;
@@ -17,7 +16,7 @@ public class APIFlowBuilderFactory implements FlowBuilderFactory {
    */
   private static final long serialVersionUID = 8112933766394898037L;
 
-  public FlowFetcher createFlowBuilder(FlowConfig flowConfig, OperationLogger logger) throws ContainerException {
+  public FlowFetcher createFlowBuilder(FlowConfig flowConfig, OperationLogger logger) {
     
     // Create a container..
     ContainerWrapper container = Universe.instance().containerFactory().createContainerFor(flowConfig);

@@ -93,7 +93,7 @@ public abstract class ContainerExecuteBuilder {
    * @return
    * @throws ContainerException
    */
-  public abstract MultiLangProcess createProcess() throws ContainerException;
+  public abstract MultiLangProcess createProcess();
 
 
   public ContainerExecuteBuilder withEnvironment(Map<String, String> m) {

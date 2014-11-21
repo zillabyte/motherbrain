@@ -27,8 +27,13 @@ public class RelationsHelper implements Serializable {
     this._base = api;
   }
 
-  public Query concretifyQuery(String flowId, String relationName, String authToken) throws APIException, InterruptedException {
-    JSONObject obj = _base.getRelationConcretified(flowId, relationName, authToken);
+  public Query concretifyQuery(String flowId, String relationName, String authToken) {
+    JSONObject obj;
+    try {
+      obj = _base.getRelationConcretified(flowId, relationName, authToken);
+    } catch (APIException e) {
+      throw new RuntimeException(e);
+    }
     
     Query result = null;
     if (obj.has("s3_only")) {
@@ -37,7 +42,7 @@ public class RelationsHelper implements Serializable {
       final JSONObject bufferSettings = obj.getJSONObject("buffer_settings");
       
       if (bufferSettings == null){
-        throw new APIException("missing buffer_settings").setUserMessage("An error occurred initializing your relation. Please delete relations associated with this app (if any) and re-push. If the problem persists, please contact support@zillabyte.com."); 
+        throw new RuntimeException("An error occurred initializing your relation. Please delete relations associated with this app (if any) and re-push. If the problem persists, please contact support@zillabyte.com."); 
       }
       result = new BufferQuery(relationName, bufferSettings);
     }
@@ -45,17 +50,22 @@ public class RelationsHelper implements Serializable {
   }
 
 
-  public JSONObject postRelationConfigForNextVersion(FlowConfig config, String relationName, ColumnDef... columns) throws APIException, InterruptedException {
+  public JSONObject postRelationConfigForNextVersion(FlowConfig config, String relationName, ColumnDef... columns) {
     JSONArray jsonSchema = new JSONArray();
     for (final ColumnDef column : columns) {
       final JSONObject jsonColumn = new JSONObject();
       jsonColumn.put(column.getAliases().get(0), column.getDataType().toString().toLowerCase());
       jsonSchema.add(jsonColumn);
     }      
-    JSONObject obj = _base.postRelationSettingsForNextVersion(relationName, jsonSchema, (String)config.get("buffer_type", "s3"), config.getAuthToken());
+    JSONObject obj;
+    try {
+      obj = _base.postRelationSettingsForNextVersion(relationName, jsonSchema, (String)config.get("buffer_type", "s3"), config.getAuthToken());
+    } catch (APIException e) {
+      throw new RuntimeException(e);
+    }
     return obj;
   }
-  public JSONObject postRelationConfigForNextVersion(FlowConfig config, String relationName, List<ColumnDef> columns) throws APIException, InterruptedException {
+  public JSONObject postRelationConfigForNextVersion(FlowConfig config, String relationName, List<ColumnDef> columns) {
     return postRelationConfigForNextVersion(config, relationName, columns.toArray(new ColumnDef[] {}));
   }
   

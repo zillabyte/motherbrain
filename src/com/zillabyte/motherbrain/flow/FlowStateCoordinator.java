@@ -5,10 +5,9 @@ import java.io.Serializable;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Logger;
 
-import com.zillabyte.motherbrain.coordination.CoordinationException;
 import com.zillabyte.motherbrain.flow.error.strategies.FlowErrorStrategy;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.flow.operations.Operation;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
 import com.zillabyte.motherbrain.universe.Universe;
 import com.zillabyte.motherbrain.utils.Utils;
 
@@ -35,10 +34,10 @@ public class FlowStateCoordinator implements Serializable {
    * @throws StateMachineException 
    * @throws FlowException 
    * @throws InterruptedException 
-   * @throws OperationException 
+   * @throws LoopException 
    * @throws CoordinationException 
    */
-  public FlowState maybeGetNewFlowState(final FlowInstanceSetBuilder builder, final FlowState currentState) throws StateMachineException, FlowException, InterruptedException, OperationException, CoordinationException {
+  public FlowState maybeGetNewFlowState(final FlowInstanceSetBuilder builder, final FlowState currentState) {
         
     /*
      * Do we have any errors in our operations?
@@ -157,7 +156,7 @@ public class FlowStateCoordinator implements Serializable {
    * @param string
    * @throws CoordinationException 
    */
-  protected void sendCycleAcknowledged() throws CoordinationException {
+  protected void sendCycleAcknowledged() {
     Universe.instance().state().sendMessage(_flow.flowStateKey() + "/operation_commands", "cycle_acknowledged");
   }
   

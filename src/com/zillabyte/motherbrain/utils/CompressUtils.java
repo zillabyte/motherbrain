@@ -19,7 +19,7 @@ public class CompressUtils {
    * @param root
    * @throws IOException
    */
-  public static byte[] compress(File root) throws IOException {
+  public static byte[] compress(File root) {
     if (root.exists()) {
       File zip = new File(Files.createTempDir(), "data.zip");
       
@@ -34,9 +34,13 @@ public class CompressUtils {
         }
       });
           
-      byte[] data = Files.toByteArray(zip);
-      zip.delete();
-      return data;
+      try {
+        byte[] data = Files.toByteArray(zip);
+        zip.delete();
+        return data;
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
     } else {
       _log.warn("no data to compress: " + root.toString());
       return new byte[] {};
@@ -50,12 +54,16 @@ public class CompressUtils {
    * @param dest
    * @throws IOException 
    */
-  public static void decompress(byte[] data, File dest) throws IOException {
+  public static void decompress(byte[] data, File dest) {
     if (data == null || data.length == 0) {
       _log.warn("no data to decompress to " + dest.toString());
     } else {
       File zip = new File(Files.createTempDir(), "data.zip");
-      Files.write(data, zip);
+      try {
+        Files.write(data, zip);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
       ZipUtil.unpack(zip, dest);
     }
   }

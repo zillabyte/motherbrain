@@ -11,14 +11,12 @@ import net.sf.json.JSONObject;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 
 import com.google.common.collect.Lists;
-import com.zillabyte.motherbrain.flow.FlowCompilationException;
 import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.config.FlowConfig;
 import com.zillabyte.motherbrain.flow.operations.Function;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.flow.operations.Operation;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
-import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangException;
 import com.zillabyte.motherbrain.relational.ColumnDef;
 
 
@@ -49,7 +47,7 @@ public class ComponentInput extends Function {
   }
   
   
-  public ComponentInput(JSONObject node, FlowConfig _flowConfig) throws FlowCompilationException {
+  public ComponentInput(JSONObject node, FlowConfig _flowConfig) {
     super(node.getString("name"));
     
     // Get the fields of embedded component input
@@ -96,7 +94,7 @@ public class ComponentInput extends Function {
   
 
   @Override
-  protected void process(MapTuple t, OutputCollector c) throws InterruptedException, OperationException {
+  protected void process(MapTuple t, OutputCollector c) throws LoopException {
     for(Entry<String, String> e : _renameFields.entrySet()) {
       final String key = e.getKey();
       /* We never put null keys in */
@@ -115,11 +113,11 @@ public class ComponentInput extends Function {
   }
 
   @Override
-  public final void prepare() throws MultiLangException, InterruptedException {
+  public final void prepare() {
   }
   
 
-  public String getParentComponentCarryFieldName() throws OperationException {
+  public String getParentComponentCarryFieldName() throws LoopException {
     return Operation.COMPONENT_CARRY_FIELD_PREFIX + this.getTopFlow().getId();
   }
   

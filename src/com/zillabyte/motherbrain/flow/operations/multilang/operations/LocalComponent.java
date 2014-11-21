@@ -18,8 +18,7 @@ import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.graph.Connection;
 import com.zillabyte.motherbrain.flow.operations.Function;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
-import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangException;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.utils.Utils;
 
 
@@ -66,17 +65,18 @@ public final class LocalComponent extends Function {
   }
 
   @Override
-  public void prepare() throws MultiLangException {
+  public void prepare() {
   }
 
   
   @Override
-  public void cleanup() throws MultiLangException, InterruptedException {
+  public void cleanup() {
   }
 
 
   @Override
-  public void process(final MapTuple t, final OutputCollector collector) throws OperationException, InterruptedException {
+  public void process(final MapTuple t, final OutputCollector collector) throws LoopException {
+
     try {
       // Translate the map tuple into a list of just the values (order is important, so we need to loop through the fields one by one).
       // This will be passed to a running rpc as an argument
@@ -86,7 +86,7 @@ public final class LocalComponent extends Function {
       }
       List<Collection<Object>> tupleList = new ArrayList<Collection<Object>>();
       tupleList.add(tupleValues);
-      
+
       // Send the rpc request
       JSONObject body = new JSONObject();
       body.put("rpc_inputs", tupleList);
@@ -94,7 +94,7 @@ public final class LocalComponent extends Function {
       Collection<?> execId = reply.getJSONObject("execute_ids").values();
       JSONObject execBody = new JSONObject();
       execBody.put("execute_ids", execId);
-      
+
       // Continue to ping the rpc until it is done
       while(true) {
         JSONObject rpcStatus = RestAPIHelper.post("/components/"+_componentName+"/results_anonymous", execBody.toString(), "");
@@ -111,10 +111,10 @@ public final class LocalComponent extends Function {
         }
         Utils.sleep(1000L);
       }
-    
     } catch (APIException e) {
-      throw (OperationException) new OperationException(this,e).setAllMessages("Error processing tuple: "+t.toString()+" (via remote RPC for component \""+_componentName+"\").");
+      throw new LoopException(this, e);
     }
+    
   }
 
   
@@ -126,12 +126,12 @@ public final class LocalComponent extends Function {
   
   
   @Override
-  public void onFinalizeDeclare() throws OperationException, InterruptedException {
+  public void onFinalizeDeclare() {
     super.onFinalizeDeclare();
   }
 
   @Override
-  public void onSetExpectedFields() throws OperationException {
+  public void onSetExpectedFields() throws LoopException {
     for(final Connection c : this.prevConnections()) {
 
       for(String field : _inputFields.keySet()) {

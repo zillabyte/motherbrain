@@ -32,50 +32,50 @@ public class CoordinationServiceWrapper implements CoordinationService {
   
   
   
-  public void initialize() throws CoordinationException {
+  public void initialize() {
     _delegate.initialize();
   }
 
   
-  public void shutdown() throws CoordinationException {
+  public void shutdown() {
     _delegate.shutdown();
   }
 
-  public <T> T getState(String key, T defaultState) throws CoordinationException {
+  public <T> T getState(String key, T defaultState) {
     return _delegate.getState(key, defaultState);
   }
   
-  public <T> T getState(String key) throws CoordinationException {
+  public <T> T getState(String key) {
     return _delegate.getState(key, null);
   }
 
-  public <T> void setState(String key, T state) throws CoordinationException {
+  public <T> void setState(String key, T state) {
     _delegate.setState(key, state);
   }
 
-  public boolean hasState(String key) throws CoordinationException {
+  public boolean hasState(String key) {
     return _delegate.hasState(key);
   }
 
-  public void removeStateWithPrefix(String key) throws CoordinationException {
+  public void removeStateWithPrefix(String key) {
     _delegate.removeStateWithPrefix(key);
   }
 
-  public void clear() throws CoordinationException {
+  public void clear() {
     _delegate.clear();
   }
   
   
 
-  public Lock lock(String lockPath, long timeout, long duration) throws CoordinationException, TimeoutException {
+  public Lock lock(String lockPath, long timeout, long duration) {
     return _delegate.lock(lockPath, timeout, duration);
   }
   
-  public Lock lock(String lockPath, long timeout) throws CoordinationException, TimeoutException {
+  public Lock lock(String lockPath, long timeout) {
     return _delegate.lock(lockPath, timeout, getDefaultLockDuration());
   }
   
-  public Lock lock(String lockPath) throws CoordinationException, TimeoutException {
+  public Lock lock(String lockPath) {
     return _delegate.lock(lockPath, getDefaultLockTimeout(), getDefaultLockDuration());
   }
   
@@ -83,32 +83,32 @@ public class CoordinationServiceWrapper implements CoordinationService {
 
   
   
-  public void sendMessage(String channel, Object message) throws CoordinationException {
+  public void sendMessage(String channel, Object message) {
     _delegate.sendMessage(channel, message);
   }
 
-  public void sendTransactionalMessage(ExecutorService exec, String channel, Object message, long timeout) throws CoordinationException, TimeoutException {
+  public void sendTransactionalMessage(ExecutorService exec, String channel, Object message, long timeout) {
     _delegate.sendTransactionalMessage(exec, channel, message, timeout);
   }
 
-  public void sendTransactionalMessage(ExecutorService exec, String channel, Object message) throws CoordinationException, TimeoutException {
+  public void sendTransactionalMessage(ExecutorService exec, String channel, Object message) throws TimeoutException {
     _delegate.sendTransactionalMessage(exec, channel, message, getDefaultTransactionMessageTimeout());
   }
   
   
-  public Watcher watchForMessage(ExecutorService exec, String channel, MessageHandler messageHandler) throws CoordinationException {
+  public Watcher watchForMessage(ExecutorService exec, String channel, MessageHandler messageHandler) {
     return _delegate.watchForMessage(exec, channel, messageHandler);
   }
 
-  public Watcher watchForAsk(ExecutorService exec, String channel, AskHandler askHandler) throws CoordinationException {
+  public Watcher watchForAsk(ExecutorService exec, String channel, AskHandler askHandler) {
     return _delegate.watchForAsk(exec, channel, askHandler);
   }
 
-  public Object ask(ExecutorService exec, String channel, Object message, long timeout) throws CoordinationException, TimeoutException {
+  public Object ask(ExecutorService exec, String channel, Object message, long timeout) {
     return _delegate.ask(exec, channel, message, timeout);
   }
   
-  public Object ask(ExecutorService exec, String channel, Object message) throws CoordinationException, TimeoutException {
+  public Object ask(ExecutorService exec, String channel, Object message) throws TimeoutException {
     return _delegate.ask(exec, channel, message, getDefaultAskTimeout());
   }
 

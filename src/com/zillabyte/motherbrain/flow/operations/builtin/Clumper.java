@@ -7,8 +7,7 @@ import com.google.common.collect.Lists;
 import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.operations.AggregationOperation;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
-import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangException;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.top.MotherbrainException;
 import com.zillabyte.motherbrain.universe.Config;
 
@@ -50,7 +49,7 @@ public abstract class Clumper extends AggregationOperation {
    * 
    */
   @Override
-  public void prepare() throws MultiLangException, OperationException, InterruptedException {
+  public void prepare() {
     super.prepare();
     _clumpMaxCount = Long.parseLong(getLocalConfig().get("max_count", _clumpMaxCount.toString()));
     _clumpMaxInterval = Long.parseLong(getLocalConfig().get("max_interval_ms", _clumpMaxInterval.toString()));
@@ -59,15 +58,15 @@ public abstract class Clumper extends AggregationOperation {
 
 
   /**
-   * @throws OperationException **
+   * @throws LoopException **
    * 
    */
   @Override
-  public void handleEmit(Object batch, Integer subBatch) throws InterruptedException, OperationException {
+  public void handleEmit(Object batch, Integer subBatch) throws LoopException {
     try {
       emitClump(batch, subBatch);
     } catch (MotherbrainException e) {
-      throw new OperationException(this, e);
+      throw new LoopException(this, e);
     }
   }
 
@@ -77,7 +76,7 @@ public abstract class Clumper extends AggregationOperation {
    * @throws MotherbrainException **
    * 
    */
-  private synchronized void emitClump(Object batch, Integer aggStoreKey) throws InterruptedException, MotherbrainException {
+  private synchronized void emitClump(Object batch, Integer aggStoreKey) throws LoopException {
     
     List<MapTuple> list = Lists.newLinkedList();
     for(MapTuple tuple : _clump.get(iterationStoreKeyPrefix(batch, aggStoreKey))) {
@@ -90,7 +89,7 @@ public abstract class Clumper extends AggregationOperation {
   
   
   
-  public abstract void execute(List<MapTuple> tuples, OutputCollector collector) throws OperationException;
+  public abstract void execute(List<MapTuple> tuples, OutputCollector collector) throws LoopException;
   
   
   /***
@@ -98,7 +97,7 @@ public abstract class Clumper extends AggregationOperation {
    * @throws InterruptedException
    * @throws MotherbrainException 
    */
-  private void maybeEmitClump(Object batch, Integer aggStoreKey) throws InterruptedException, MotherbrainException {
+  private void maybeEmitClump(Object batch, Integer aggStoreKey) throws LoopException {
     if (_clump.size() >= _clumpMaxCount) {
       emitClump(batch, aggStoreKey);
     } else if (_clumpMaxInterval > 0 && _lastEmitTime + _clumpMaxInterval < System.currentTimeMillis()) {
@@ -117,7 +116,7 @@ public abstract class Clumper extends AggregationOperation {
 
 
   @Override
-  public void handleConsume(Object batch, MapTuple t, String sourceStream, OutputCollector c) throws MotherbrainException, InterruptedException {
+  public void handleConsume(Object batch, MapTuple t, String sourceStream, OutputCollector c) throws LoopException {
     addToClump(batch, t);
     maybeEmitClump(batch, getIterationStoreKey(batch));
   }

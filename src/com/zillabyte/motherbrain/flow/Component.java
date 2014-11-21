@@ -8,7 +8,6 @@ import com.zillabyte.motherbrain.flow.components.ComponentInput;
 import com.zillabyte.motherbrain.flow.components.ComponentOutput;
 import com.zillabyte.motherbrain.flow.config.FlowConfig;
 import com.zillabyte.motherbrain.flow.graph.FlowGraph;
-import com.zillabyte.motherbrain.relational.DefaultStreamException;
 
 @NonNullByDefault
 public class Component extends Flow {
@@ -58,7 +57,7 @@ public class Component extends Flow {
   }
 
   @Override
-  public StreamBuilder createStream(ComponentOutput producer) throws DefaultStreamException {
+  public StreamBuilder createStream(ComponentOutput producer) {
     return StreamBuilder.makeComponentStreamBuilder(this, producer, producer.produceStream());
   }
   

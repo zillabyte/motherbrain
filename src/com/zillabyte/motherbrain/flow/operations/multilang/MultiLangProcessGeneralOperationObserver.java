@@ -12,8 +12,8 @@ import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
 
 import com.zillabyte.motherbrain.flow.MapTuple;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.flow.operations.Operation;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
 import com.zillabyte.motherbrain.flow.operations.OperationLogger;
 import com.zillabyte.motherbrain.utils.JSONUtil;
 
@@ -93,7 +93,7 @@ public class MultiLangProcessGeneralOperationObserver implements MultiLangMessag
    * 
    */
   @Override
-  public void handleMessage(String line) throws OperationException, InterruptedException {
+  public void handleMessage(String line) throws LoopException {
 
     // Sanity
     if (line == null) return;
@@ -107,22 +107,15 @@ public class MultiLangProcessGeneralOperationObserver implements MultiLangMessag
     if (obj.has("ping")) {
       
       // The process is making sure we're alive.  Respond with a 'pong'
-      try {
-        _proc.writeMessageWithEnd("{\"pong\": \"" + System.currentTimeMillis() + "\"}");
-      } catch (MultiLangProcessException e) {
-        throw new OperationException(_operation, e);
-      }
+      _proc.writeMessageWithEnd("{\"pong\": \"" + System.currentTimeMillis() + "\"}");
     
     } else if (obj.has("command") && obj.getString("command").equalsIgnoreCase("fail")) {
       
       // Errors! 
       _log.error("error: " + obj.getString("msg"));
       
-      // Tell the operation to ERROR
-      throw (OperationException)
-        new OperationException(_operation)
-        .setUserMessage(obj.getString("msg"))
-        .setInternalMessage(obj.getString("msg"));
+      // Loop error
+      throw new LoopException(_operation, obj.getString("msg"));
       
     } else if (obj.has("command") && obj.getString("command").equalsIgnoreCase("log")) {
       _operation.logger().writeLog(obj.getString("msg"), OperationLogger.LogPriority.RUN);
@@ -141,7 +134,7 @@ public class MultiLangProcessGeneralOperationObserver implements MultiLangMessag
    * @throws MultiLangProcessDeadException 
    * @throws InterruptedException 
    */
-  public void sendTupleMessage(MapTuple t) throws MultiLangProcessException, InterruptedException {
+  public void sendTupleMessage(MapTuple t) {
 
     JSONObject meta = new JSONObject();
     meta.put("confidence", t.meta().getConfidence());
@@ -182,7 +175,7 @@ public class MultiLangProcessGeneralOperationObserver implements MultiLangMessag
    * @throws MultiLangProcessDeadException 
    * @throws InterruptedException 
    */
-  public void sendBeginGroup(MapTuple t) throws MultiLangProcessException, InterruptedException {
+  public void sendBeginGroup(MapTuple t) {
     
     JSONObject meta = new JSONObject();
     meta.put("confidence", t.meta().getConfidence());
@@ -210,7 +203,7 @@ public class MultiLangProcessGeneralOperationObserver implements MultiLangMessag
    * @throws MultiLangProcessDeadException 
    * @throws InterruptedException 
    */
-  public void sendAggregate(MapTuple t, JSONArray aliases) throws MultiLangProcessException, InterruptedException {
+  public void sendAggregate(MapTuple t, JSONArray aliases) {
     
     JSONObject meta = new JSONObject();
     meta.put("confidence", t.meta().getConfidence());
@@ -240,7 +233,7 @@ public class MultiLangProcessGeneralOperationObserver implements MultiLangMessag
    * @throws InterruptedException *
    * 
    */
-  public void sendEndGroup() throws MultiLangProcessException, InterruptedException {
+  public void sendEndGroup() {
     
     JSONObject obj = new JSONObject();
     obj.put("command", "end_group");
@@ -267,10 +260,10 @@ public class MultiLangProcessGeneralOperationObserver implements MultiLangMessag
   }
 
   @Override
-  public void maybeThrowNextError() throws OperationException {
+  public void maybeThrowNextError() throws LoopException {
     final Exception ex = getNextError();
     if (ex != null) {
-      throw new OperationException(this._operation, ex);
+      throw new LoopException(this._operation, ex);
     }
   }
 }

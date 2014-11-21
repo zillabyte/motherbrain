@@ -1,11 +1,8 @@
 package com.zillabyte.motherbrain.flow.operations.multilang.builder;
 
 import java.util.Map;
-import java.util.concurrent.TimeoutException;
 
 import com.google.monitoring.runtime.instrumentation.common.com.google.common.collect.Maps;
-import com.zillabyte.motherbrain.coordination.CoordinationException;
-import com.zillabyte.motherbrain.flow.StateMachineException;
 import com.zillabyte.motherbrain.flow.operations.Operation;
 
 
@@ -53,7 +50,7 @@ public class PlaceHolderOperation<T> extends Operation {
   }
 
   @Override
-  public void transitionToState(String s, boolean transactional) throws StateMachineException, TimeoutException, CoordinationException {
+  public void transitionToState(String s, boolean transactional) {
     throw new IllegalStateException();
   }
 

@@ -1,6 +1,6 @@
 package com.zillabyte.motherbrain.flow.error.strategies;
 
-import com.zillabyte.motherbrain.flow.operations.OperationException;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.utils.Utils;
 
 
@@ -21,7 +21,7 @@ public class FakeLocalException extends RuntimeException {
   private static final long WAIT_INTERVAL_MS = 1000 * 1L;
   private static final long serialVersionUID = -6173318037038700144L;
 
-  public FakeLocalException(OperationException error) {
+  public FakeLocalException(LoopException error) {
     super(error);
   }
 

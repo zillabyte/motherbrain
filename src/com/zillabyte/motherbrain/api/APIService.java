@@ -14,7 +14,7 @@ public interface APIService {
 
   JSONObject getRelationSettings(String relationName, String authToken) throws APIException;
 
-  JSONObject getRelationConcretified(String flowId, String sql, String authToken)  throws APIException;
+  JSONObject getRelationConcretified(String flowId, String sql, String authToken) throws APIException;
 
   JSONObject postRelationSettingsForNextVersion(String relationName, JSONArray jsonSchema, String bufferType, String authToken) throws APIException;
 
@@ -22,6 +22,6 @@ public interface APIService {
 
   JSONObject postFlowRegistration(String id, JSONObject schema, String authToken) throws APIException;
 
-  JSONObject appendRelation(String relationId, Collection<MapTuple> buffer, String authToken)  throws APIException;
+  JSONObject appendRelation(String relationId, Collection<MapTuple> buffer, String authToken) throws APIException;
   
 }

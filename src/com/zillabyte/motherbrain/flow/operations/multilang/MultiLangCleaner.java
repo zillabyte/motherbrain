@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.google.common.collect.Maps;
-import com.zillabyte.motherbrain.coordination.CoordinationException;
 import com.zillabyte.motherbrain.flow.operations.Operation;
 import com.zillabyte.motherbrain.universe.Universe;
 import com.zillabyte.motherbrain.utils.Utils;
@@ -21,7 +20,7 @@ public class MultiLangCleaner {
    * @throws InterruptedException 
    * @throws CoordinationException 
    */
-  public static void registerOperation(MultiLangProcess process, Operation op) throws InterruptedException, CoordinationException {
+  public static void registerOperation(MultiLangProcess process, Operation op) {
     
     // Capture some information for later
     HashMap<String, Object> map = Maps.newHashMap();

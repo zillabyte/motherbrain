@@ -3,10 +3,7 @@ package com.zillabyte.motherbrain.flow.operations;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-import com.zillabyte.motherbrain.coordination.CoordinationException;
-import com.zillabyte.motherbrain.flow.FlowStateException;
 import com.zillabyte.motherbrain.flow.MapTuple;
-import com.zillabyte.motherbrain.flow.StateMachineException;
 import com.zillabyte.motherbrain.flow.StateMachineHelper;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.config.OperationConfig;
@@ -43,7 +40,7 @@ public abstract class Function extends Operation implements ProcessableOperation
    * @throws ExecutionException 
    * @throws FakeLocalException 
    */
-  protected abstract void process(MapTuple t, OutputCollector c) throws OperationException, InterruptedException;
+  protected abstract void process(MapTuple t, OutputCollector c) throws LoopException;
 
   /***
    * 
@@ -53,7 +50,7 @@ public abstract class Function extends Operation implements ProcessableOperation
    * @throws FakeLocalException 
    * @throws OperationDeadException 
    */
-  public void handleProcess(final MapTuple t, final OutputCollector c) throws InterruptedException, OperationException, FakeLocalException {
+  public void handleProcess(final MapTuple t, final OutputCollector c) throws FakeLocalException {
 
     try {
 
@@ -62,22 +59,14 @@ public abstract class Function extends Operation implements ProcessableOperation
       switch(currentState) {
       case STARTED:
       case IDLE:
-        try {
-          transitionToState(FunctionState.ACTIVE.toString(), true);
-        } catch (StateMachineException | TimeoutException e) {
-          throw new OperationException(Function.this, e);
-        }
+        transitionToState(FunctionState.ACTIVE.toString(), true);
         // trickle!
       case PAUSING:
       case SUSPECT:
         // When we're in loop_error, we might as well keep consuming...restarting the instance will likely just produce more loop errors anyway
       case ACTIVE:
         
-        try { 
-          heartbeatErrorCheck_ThreadUnsafe();
-        } catch(Exception e) {
-          handleLoopError(e);
-        }
+        heartbeatErrorCheck_ThreadUnsafe();
 
         // Init
         incLoop();
@@ -91,16 +80,16 @@ public abstract class Function extends Operation implements ProcessableOperation
           }
           // Make sure we're alive..
           if (isAlive() == false) {
-            throw new OperationException(Function.this, "The operation is not alive.");
+            throw new LoopException(Function.this, "The operation is not alive.");
           }
           // process
           c.resetCounter();
           process(t, c);
 
-        } catch(InterruptedException e) {
-          // Do nothing... 
-        } catch(Exception e) {
+        } catch(LoopException e) {
           handleLoopError(e);
+        } catch(Exception e) {
+          handleFatalError(e);
         } finally {
           markEndActivity();
         }
@@ -124,10 +113,8 @@ public abstract class Function extends Operation implements ProcessableOperation
 
       default:
         // This should never be reached.
-        throw new FlowStateException(Function.this, "don't know how to handle state: " + currentState);
+        throw new RuntimeException("Unknown function state: " + currentState);
       }
-    } catch(InterruptedException e) {
-      // Continue processing...
     } catch (FakeLocalException e) {
       ((FakeLocalException) e).printAndWait();
     } catch (Exception e) {
@@ -137,61 +124,49 @@ public abstract class Function extends Operation implements ProcessableOperation
 
 
   @Override
-  public void handleIdleDetected() throws InterruptedException, OperationException {
-    try {
-      if (_state == FunctionState.PAUSING) {
-        transitionToState(SinkState.PAUSED.toString(), true);
-      }
-      else if (_state == FunctionState.ACTIVE || _state == FunctionState.SUSPECT|| _state == FunctionState.STARTED) {
-        transitionToState(FunctionState.IDLE.toString(), true);
-      }
-    } catch (StateMachineException | TimeoutException | CoordinationException e) {
-      throw new OperationException(this, e);
+  public void handleIdleDetected() {
+    if (_state == FunctionState.PAUSING) {
+      transitionToState(SinkState.PAUSED.toString(), true);
+    }
+    else if (_state == FunctionState.ACTIVE || _state == FunctionState.SUSPECT|| _state == FunctionState.STARTED) {
+      transitionToState(FunctionState.IDLE.toString(), true);
     }
   }
 
   @Override
-  public void prePrepare() throws InterruptedException, OperationException {
-    try {
-      transitionToState(FunctionState.STARTING.toString(), true);
-    } catch (StateMachineException | CoordinationException | TimeoutException e) {
-      throw new OperationException(this, e);
-    }
+  public void prePrepare() {
+    transitionToState(FunctionState.STARTING.toString(), true);
   }
 
   @Override
-  public void postPrepare() throws InterruptedException, OperationException {
-    try {
-      transitionToState(FunctionState.STARTED.toString(), true);
-    } catch (StateMachineException | CoordinationException | TimeoutException e) {
-      throw new OperationException(this, e);
-    }
+  public void postPrepare() {
+    transitionToState(FunctionState.STARTED.toString(), true);
   }
 
   /***
    * 
-   * @throws OperationException
+   * @throws LoopException
    */
   @Override
-  public void handlePause() throws OperationException {
+  public void handlePause() {
     // Function pause when they IDLE during the PAUSING state
     try {
       if(!getState().equalsIgnoreCase("ERROR")) transitionToState("PAUSING");
-    } catch (StateMachineException | CoordinationException | TimeoutException e) {
+    } catch (Exception e) {
       _log.warn("An error occured while trying to resume "+e.getMessage());
     }
   }
 
   /**
-   * @throws OperationException
+   * @throws LoopException
    */
   @Override
-  public void handleResume() throws OperationException {
+  public void handleResume() {
 
     // Resume the operation
     try {
       if(!getState().equalsIgnoreCase("ERROR")) transitionToState("ACTIVE");
-    } catch (StateMachineException | CoordinationException | TimeoutException e) {
+    } catch (Exception e) {
       _log.warn("An error occured while trying to resume "+e.getMessage());
     }
   }
@@ -213,14 +188,14 @@ public abstract class Function extends Operation implements ProcessableOperation
    * @throws TimeoutException
    * @throws StateMachineException
    */
-  public synchronized void transitionToState(FunctionState newState, boolean transactional) throws CoordinationException, TimeoutException, StateMachineException {
+  public synchronized void transitionToState(FunctionState newState, boolean transactional) {
     FunctionState oldState = _state;
     _state = StateMachineHelper.transition(_state, newState);
     if(_state != oldState) notifyOfNewState(newState.toString(), transactional);
   }
 
   @Override
-  public synchronized void transitionToState(String newState, boolean transactional) throws CoordinationException, TimeoutException, StateMachineException {
+  public synchronized void transitionToState(String newState, boolean transactional) {
     transitionToState(FunctionState.valueOf(newState), transactional); 
   }
 

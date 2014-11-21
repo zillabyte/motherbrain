@@ -8,6 +8,7 @@ import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Maps;
 import com.google.monitoring.runtime.instrumentation.common.com.google.common.collect.Sets;
 import com.zillabyte.motherbrain.flow.MapTuple;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 
 /***
  * Use this for testing, not for production
@@ -29,38 +30,38 @@ public class MemoryStore implements AggregationStore {
   
   
   @Override
-  public void deleteBatch(Object batch) {
+  public void deleteBatch(Object batch) throws LoopException {
     _map.remove(batch);
   }
   
   
   @Override
-  public void addToGroup(Object batch, AggregationKey key, MapTuple tuple) {
+  public void addToGroup(Object batch, AggregationKey key, MapTuple tuple) throws LoopException {
     getMap(batch).put(key, tuple);
   }
 
   @Override
-  public boolean hasGroup(Object batch, AggregationKey key) {
+  public boolean hasGroup(Object batch, AggregationKey key) throws LoopException {
     return getMap(batch).containsKey(key);
   }
 
   @Override
-  public Iterator<MapTuple> getGroupIterator(Object batch, AggregationKey key) {
+  public Iterator<MapTuple> getGroupIterator(Object batch, AggregationKey key) throws LoopException {
     return getMap(batch).get(key).iterator();
   }
 
   @Override
-  public void deleteGroup(Object batch, AggregationKey key) {
+  public void deleteGroup(Object batch, AggregationKey key) throws LoopException {
     getMap(batch).removeAll(key);
   }
 
   @Override
-  public Iterator<AggregationKey> keyIterator(Object batch) {
+  public Iterator<AggregationKey> keyIterator(Object batch) throws LoopException {
     return Sets.newHashSet(getMap(batch).keySet()).iterator();
   }
 
   @Override
-  public void flush(Object batch){
+  public void flush(Object batch) throws LoopException {
   }
 
   public Collection<Object> getBatches() {

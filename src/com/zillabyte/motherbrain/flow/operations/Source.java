@@ -13,15 +13,11 @@ import com.github.rholder.retry.Retryer;
 import com.github.rholder.retry.RetryerBuilder;
 import com.github.rholder.retry.StopStrategies;
 import com.github.rholder.retry.WaitStrategies;
-import com.zillabyte.motherbrain.coordination.CoordinationException;
-import com.zillabyte.motherbrain.flow.FlowStateException;
-import com.zillabyte.motherbrain.flow.StateMachineException;
 import com.zillabyte.motherbrain.flow.StateMachineHelper;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.collectors.coordinated.CoordinatedOutputCollector;
 import com.zillabyte.motherbrain.flow.config.OperationConfig;
 import com.zillabyte.motherbrain.flow.error.strategies.FakeLocalException;
-import com.zillabyte.motherbrain.top.MotherbrainException;
 import com.zillabyte.motherbrain.universe.Config;
 import com.zillabyte.motherbrain.universe.Universe;
 import com.zillabyte.motherbrain.utils.Log4jWrapper;
@@ -87,10 +83,10 @@ public abstract class Source extends Operation {
 
   /***
    * Asks the FlowInstance for permission to start emitting
-   * @throws OperationException 
+   * @throws LoopException 
    * @throws InterruptedException 
    */
-  protected boolean askForPermissionToEmit() throws CoordinationException, OperationException, InterruptedException {
+  protected boolean askForPermissionToEmit() {
     
     // Init 
     final long timeout = Config.getOrDefault("state.streams.emit_permission.timeout", 1000L * 5);
@@ -98,8 +94,7 @@ public abstract class Source extends Operation {
     RetryerBuilder<Boolean> builder = RetryerBuilder.newBuilder();
     
     // Build the retryer
-    builder.retryIfExceptionOfType(TimeoutException.class);
-    builder.retryIfExceptionOfType(CoordinationException.class);
+    builder.retryIfExceptionOfType(Exception.class);
     builder.withStopStrategy(StopStrategies.stopAfterAttempt(numTries));
     builder.withWaitStrategy(WaitStrategies.randomWait(2, TimeUnit.SECONDS, 20, TimeUnit.SECONDS));
     Retryer<Boolean> retryer = builder.build();
@@ -122,7 +117,7 @@ public abstract class Source extends Operation {
     } catch (ExecutionException e) {
       
       // Some other error... propagate. 
-      throw (OperationException) new OperationException(Source.this, e).setUserMessage("An error occurred in the source while it was asking for permission to start emitting.").adviseRetry();
+      throw new RuntimeException("An error occurred in the source while it was asking for permission to start emitting.");
       
     } catch (RetryException e) {
 
@@ -132,7 +127,7 @@ public abstract class Source extends Operation {
        * don't want operations waiting around, thinking they're forever stuck in STARTED. 
        * Instead, just die and let a new operation take its place. 
        */
-      throw (OperationException) new OperationException(Source.this).setAllMessages("Source operation failed to get a response from master while asking for emit permission.").adviseRetry();
+      throw new RuntimeException("Source operation failed to get a response from master while asking for emit permission.");
     }
 
   }
@@ -143,12 +138,12 @@ public abstract class Source extends Operation {
   /****
    * Called before the next cycle starts
    * @throws InterruptedException
-   * @throws OperationException 
+   * @throws LoopException 
    * @throws TimeoutException 
    * @throws StateMachineException 
    * @throws CoordinationException 
    */
-  public void onBeginCycle(OutputCollector output) throws InterruptedException, OperationException, CoordinationException, StateMachineException, TimeoutException  {
+  public void onBeginCycle(OutputCollector output) {
     // We want this transition to be transactional because if we fail to communicate, then 
     // we want this operation to error out; otherwise the flow will hang
     transitionToState(SourceState.EMITTING.toString(), true);
@@ -164,24 +159,20 @@ public abstract class Source extends Operation {
   /***
    * Called when the cycle ends
    * @throws InterruptedException 
-   * @throws OperationException 
+   * @throws LoopException 
    * @throws TimeoutException 
    * @throws StateMachineException 
    * @throws CoordinationException 
    */
-  public void onEndCycle(OutputCollector output) throws InterruptedException, OperationException, CoordinationException, StateMachineException, TimeoutException {
+  public void onEndCycle(OutputCollector output) {
     //    _sourceLog.info("onEndCycle: " + output);
     transitionToState(SourceState.EMIT_COMPLETE.toString(), true);
-    try {
-      handleStats_ThreadUnsafe();
-    } catch (CoordinationException e) {
-      throw new OperationException(this, e);
-    }
+    handleStats_ThreadUnsafe();
+
     if (output instanceof CoordinatedOutputCollector) {
       ((CoordinatedOutputCollector)output).explicitlyCompleteBatch(Utils.valueOf(this._cycles.get()));
     }
   }
-
   
 
   /***
@@ -189,14 +180,9 @@ public abstract class Source extends Operation {
    * @param output
    * @throws InterruptedException 
    */
-  protected abstract boolean nextTuple(OutputCollector output) throws OperationException, InterruptedException;
+  protected abstract boolean nextTuple(OutputCollector output) throws LoopException;
 
 
-
-
-
-  
-  
   /****
    * 
    * @return
@@ -211,10 +197,10 @@ public abstract class Source extends Operation {
    * the gate-keeper to the lower 'emitCycle'
    * @param output
    * @throws InterruptedException 
-   * @throws OperationException 
+   * @throws LoopException 
    * @throws OperationDeadException 
    */
-  public void handleNextTuple(final OutputCollector output) throws InterruptedException, OperationException, OperationDeadException {
+  public void handleNextTuple(final OutputCollector output) {
     try { 
 
       if (_sleeper.isShouldSleep()) {
@@ -255,7 +241,7 @@ public abstract class Source extends Operation {
         
         // Ensure we're alive..
         if (isAlive() == false) {
-          throw new OperationException(Source.this, "The operation is not alive.");
+          throw new RuntimeException("The operation is not alive.");
         }
 
         // Already in EMITTING state, go ahead and emit the next cycle,
@@ -266,11 +252,9 @@ public abstract class Source extends Operation {
         boolean continueCycle = true;
         try {
           continueCycle = nextTuple(output);
-        } catch(OperationException e) {
+        } catch(LoopException e) {
           handleLoopError(e);
-        } catch(InterruptedException e) {
-          // Continue processing...
-        } catch(Throwable e) {
+        } catch(Exception e) {
           handleFatalError(e);
         } finally {          
           markEndActivity();
@@ -315,17 +299,13 @@ public abstract class Source extends Operation {
         
       default:
         // This should never be reached.
-        throw new FlowStateException(Source.this, "don't know how to handle state: " + currentState);     
+        throw new RuntimeException("Unknown source state: " + currentState);     
       }
-
-    } catch (TimeoutException e) {
-      handleLoopError(e);
-    } catch (MotherbrainException e) {
-      handleFatalError(e);
-    } catch (InterruptedException e) {
+      
     } catch(FakeLocalException e) {
       e.printAndWait();
-    } finally {
+    } catch (Exception e) {
+      handleFatalError(e);
     }
     return; 
   }
@@ -336,7 +316,7 @@ public abstract class Source extends Operation {
    * Called when there's been no activity for a while... 
    */
   @Override
-  public void handleIdleDetected() throws InterruptedException, OperationException {
+  public void handleIdleDetected() {
     // A source doesn't go into an idle state, so do nothing
   }
 
@@ -361,9 +341,9 @@ public abstract class Source extends Operation {
   /***
    * 
    * @return
-   * @throws OperationException 
+   * @throws LoopException 
    */
-  public boolean isPaused() throws OperationException {
+  public boolean isPaused() {
     return (this._state == SourceState.PAUSED);
   }
 
@@ -373,22 +353,18 @@ public abstract class Source extends Operation {
   /***
    * 
    * @param command
-   * @throws OperationException
+   * @throws LoopException
    * @throws InterruptedException 
    * @throws CoordinationException 
    */
   @Override
-  protected void handleFlowCommand(String command) throws Exception {
+  protected void handleFlowCommand(String command) {
     super.handleFlowCommand(command);
     if (command.equalsIgnoreCase("cycle_acknowledged")) {
       
       // emit_complete has been acknowledged.. transition.. 
-      try {
-        transitionToState(SourceState.WAITING_FOR_NEXT_CYCLE.toString(), true);
-        _sleeper.sleepFor(PERMISSION_DENIED_WAIT); // don't be too eager!
-      } catch (StateMachineException | TimeoutException e) {
-        throw new OperationException(this, e);
-      }
+      transitionToState(SourceState.WAITING_FOR_NEXT_CYCLE.toString(), true);
+      _sleeper.sleepFor(PERMISSION_DENIED_WAIT); // don't be too eager!
       
     }
   }
@@ -398,12 +374,8 @@ public abstract class Source extends Operation {
    * 
    */
   @Override
-  public void prePrepare() throws InterruptedException, OperationException {
-    try {
-      transitionToState(SourceState.STARTING.toString(), true);
-    } catch (StateMachineException | TimeoutException | CoordinationException e) {
-      throw new OperationException(this, e);
-    }
+  public void prePrepare() {
+    transitionToState(SourceState.STARTING.toString(), true);
   }
 
   
@@ -411,12 +383,8 @@ public abstract class Source extends Operation {
    * 
    */
   @Override
-  public void postPrepare() throws InterruptedException, OperationException {
-    try {
-      transitionToState(SourceState.STARTED, true);
-    } catch (StateMachineException | TimeoutException | CoordinationException e) {
-      throw new OperationException(this, e);
-    }
+  public void postPrepare() {
+    transitionToState(SourceState.STARTED, true);
   }
 
   
@@ -468,14 +436,14 @@ public abstract class Source extends Operation {
    * @throws TimeoutException
    * @throws StateMachineException
    */
-  public synchronized void transitionToState(SourceState newState, boolean transactional) throws CoordinationException, TimeoutException, StateMachineException {
+  public synchronized void transitionToState(SourceState newState, boolean transactional) {
     SourceState oldState = _state;
     _state = StateMachineHelper.transition(_state, newState);
     if(_state != oldState) notifyOfNewState(newState.toString(), transactional);
   }
   
   @Override
-  public synchronized void transitionToState(String newState, boolean transactional) throws CoordinationException, TimeoutException, StateMachineException {
+  public synchronized void transitionToState(String newState, boolean transactional) {
     transitionToState(SourceState.valueOf(newState), transactional); 
   }
 

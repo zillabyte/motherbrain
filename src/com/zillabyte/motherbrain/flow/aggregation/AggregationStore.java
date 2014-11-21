@@ -5,6 +5,7 @@ import java.io.Serializable;
 import java.util.Iterator;
 
 import com.zillabyte.motherbrain.flow.MapTuple;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 
 
 /***
@@ -25,14 +26,14 @@ public interface AggregationStore extends Serializable {
    * @param key
    * @param tuple
    */
-  public void addToGroup(Object batch, AggregationKey key, MapTuple tuple) throws AggregationException;
+  public void addToGroup(Object batch, AggregationKey key, MapTuple tuple) throws LoopException;
 
   
   /***
    * Return T if the group exists
    * @param key
    */
-  public boolean hasGroup(Object batch, AggregationKey key) throws AggregationException;
+  public boolean hasGroup(Object batch, AggregationKey key) throws LoopException;
 
   
   /**
@@ -40,14 +41,14 @@ public interface AggregationStore extends Serializable {
    * Order is not guaranteed 
    * @param key
    */
-  public Iterator<MapTuple> getGroupIterator(Object batch, AggregationKey key) throws AggregationException;
+  public Iterator<MapTuple> getGroupIterator(Object batch, AggregationKey key) throws LoopException;
   
   
   /***
    * Deletes all data associated with the group
    * @param key
    */
-  public void deleteGroup(Object batch, AggregationKey key) throws AggregationException;
+  public void deleteGroup(Object batch, AggregationKey key) throws LoopException;
   
   
   
@@ -56,7 +57,7 @@ public interface AggregationStore extends Serializable {
    * @param batch
    * @throws AggregationException 
    */
-  public void deleteBatch(Object batch) throws AggregationException;
+  public void deleteBatch(Object batch) throws LoopException;
 
 
   
@@ -66,12 +67,12 @@ public interface AggregationStore extends Serializable {
    * @throws InterruptedException 
    * @throws IOException 
    */
-  public Iterator<AggregationKey> keyIterator(Object batch) throws AggregationException;
+  public Iterator<AggregationKey> keyIterator(Object batch) throws LoopException;
   
   
   /**
    * Flush store to offloader
    */
-  public void flush(Object batch) throws AggregationException;
+  public void flush(Object batch) throws LoopException;
   
 }

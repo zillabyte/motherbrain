@@ -1,7 +1,7 @@
 package com.zillabyte.motherbrain.flow.buffer;
 
 import com.zillabyte.motherbrain.flow.MapTuple;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 
 /**
  * 
@@ -9,5 +9,5 @@ import com.zillabyte.motherbrain.flow.operations.OperationException;
  *
  */
 public interface BufferProducer {
-  public void pushTuple(MapTuple t) throws OperationException;
+  public void pushTuple(MapTuple t) throws LoopException;
 }

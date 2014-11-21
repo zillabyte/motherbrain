@@ -8,15 +8,13 @@ import net.sf.json.JSONObject;
 
 import com.google.common.collect.Lists;
 import com.zillabyte.motherbrain.flow.Fields;
-import com.zillabyte.motherbrain.flow.FlowCompilationException;
 import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.config.FlowConfig;
 import com.zillabyte.motherbrain.flow.graph.Connection;
 import com.zillabyte.motherbrain.flow.operations.Function;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.flow.operations.Operation;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
-import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangException;
 import com.zillabyte.motherbrain.relational.ColumnDef;
 
 
@@ -37,7 +35,7 @@ public class ComponentOutput extends Function {
     _componentFields = fields;
   }
   
-  public ComponentOutput(JSONObject node, FlowConfig _flowConfig) throws FlowCompilationException {
+  public ComponentOutput(JSONObject node, FlowConfig _flowConfig) {
     super(node.getString("name"));
     
     // Get the fields
@@ -78,7 +76,7 @@ public class ComponentOutput extends Function {
 
 
   @Override
-  protected void process(MapTuple t, OutputCollector c) throws OperationException, InterruptedException {
+  protected void process(MapTuple t, OutputCollector c) throws LoopException {
     MapTuple outputTuple = new MapTuple(t);
     boolean carryFieldSeen = false;
     
@@ -99,7 +97,7 @@ public class ComponentOutput extends Function {
         carryFieldSeen = true;
       }
 
-      if(!carryFieldSeen) throw (OperationException) new OperationException(this).setAllMessages("Attempted to merge fields in \"" + instanceName() + "\", but no input tuple given!");
+      if(!carryFieldSeen) throw (LoopException) new LoopException(this, "Attempted to merge fields in \"" + instanceName() + "\", but no input tuple given!");
       outputTuple.remove(getParentComponentCarryFieldName());
       
     }
@@ -107,7 +105,7 @@ public class ComponentOutput extends Function {
   }
 
   @Override
-  public void onSetExpectedFields() throws OperationException {
+  public void onSetExpectedFields() throws LoopException {
     for(final Connection c : this.prevConnections()) {
 
       // Because we are a simple pass-through, any expected fields of us will be expected of the 
@@ -129,7 +127,7 @@ public class ComponentOutput extends Function {
   }
   
   @Override
-  public final void prepare() throws MultiLangException, InterruptedException {
+  public final void prepare() {
     /* Noop */
   }  
 
@@ -138,7 +136,7 @@ public class ComponentOutput extends Function {
   }
   
   
-  public String getParentComponentCarryFieldName() throws OperationException {
+  public String getParentComponentCarryFieldName() throws LoopException {
     return Operation.COMPONENT_CARRY_FIELD_PREFIX + this.getTopFlow().getId();
   }
   

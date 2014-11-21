@@ -6,23 +6,18 @@ import net.sf.json.JSONObject;
 
 import org.apache.log4j.Logger;
 
-import com.zillabyte.motherbrain.api.APIException;
 import com.zillabyte.motherbrain.api.RelationsHelper;
-import com.zillabyte.motherbrain.coordination.CoordinationException;
 import com.zillabyte.motherbrain.flow.Fields;
-import com.zillabyte.motherbrain.flow.FlowCompilationException;
 import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.buffer.mock.LocalBufferProducer;
 import com.zillabyte.motherbrain.flow.config.FlowConfig;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.flow.operations.Operation;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
 import com.zillabyte.motherbrain.flow.operations.OperationLogger;
 import com.zillabyte.motherbrain.flow.operations.Sink;
 import com.zillabyte.motherbrain.relational.ColumnDef;
 import com.zillabyte.motherbrain.relational.RelationDef;
-import com.zillabyte.motherbrain.top.MotherbrainException;
 import com.zillabyte.motherbrain.universe.Universe;
-import com.zillabyte.motherbrain.utils.MeteredLog;
 import com.zillabyte.motherbrain.utils.Utils;
 
 public class SinkToBuffer extends Sink {
@@ -47,12 +42,12 @@ public class SinkToBuffer extends Sink {
   
   
   @SuppressWarnings("unchecked")
-  public SinkToBuffer(JSONObject node, FlowConfig config) throws FlowCompilationException, InterruptedException {
+  public SinkToBuffer(JSONObject node, FlowConfig config) {
     super(node.getString("name"));
      
     String relationName = node.containsKey("relation") ?  node.getString("relation") : node.getString("name");
     if (relationName == null) {
-      throw (FlowCompilationException) new FlowCompilationException().setAllMessages("Could not get relation name from flow meta data: "+node);
+      throw new RuntimeException("Could not get relation name from flow meta data: "+node);
     }
     _relation = new RelationDef(relationName);
     _topicName = null;  // We don't know it yet
@@ -72,12 +67,12 @@ public class SinkToBuffer extends Sink {
   /***
    * 
    * @param command
-   * @throws OperationException
+   * @throws LoopException
    * @throws InterruptedException 
    * @throws CoordinationException 
    */
   @Override
-  protected void handleFlowCommand(String command) throws Exception {
+  protected void handleFlowCommand(String command) {
     if (command.equalsIgnoreCase("cycle_acknowledged")) {
 
     }
@@ -93,7 +88,7 @@ public class SinkToBuffer extends Sink {
    * 
    */
   @Override 
-  public void onSetExpectedFields() throws OperationException {
+  public void onSetExpectedFields() throws LoopException {
     for(ColumnDef c : this._relation.allColumns()) {
       for(String s : c.getAliases()) {
         Fields f = new Fields(s);
@@ -105,7 +100,7 @@ public class SinkToBuffer extends Sink {
   }
 
   @Override
-  protected void process(MapTuple t) throws MotherbrainException, InterruptedException {
+  protected void process(MapTuple t) throws LoopException {
     if(_producer == null)
       initProducer();
     // Sanity check:
@@ -126,8 +121,7 @@ public class SinkToBuffer extends Sink {
         if(expectField) break;
       }
       if(!expectField) {
-        _operationLogger.writeLog("Unexpected field '"+field+"' in tuple '"+t.toString()+"'. Data will not be sunk.", OperationLogger.LogPriority.ERROR);
-        return;
+        throw new LoopException(this, "Unexpected field '"+field+"' in tuple '"+t.toString()+"'. Data will not be sunk.");
       }
     }
     
@@ -140,24 +134,20 @@ public class SinkToBuffer extends Sink {
   }
   
   @Override
-  public void onFinalizeDeclare() throws OperationException, InterruptedException { 
+  public void onFinalizeDeclare() { 
 
     //RelationDefFactory relationFactory = Universe.instance().relationFactory();
     JSONObject bufferSettings;
-    try {
-      
-      _config.set("buffer_type", "s3"); // TODO: Generic sink types?
-      JSONObject apiResult = RelationsHelper.instance().postRelationConfigForNextVersion(_config, _relation.name(), _relation.valueColumns());
-            
-      if(apiResult.containsKey("buffer_settings")){
-        bufferSettings = apiResult.getJSONObject("buffer_settings");
-      }else{
-        throw (OperationException) new OperationException(this, "Did not get bufferSettings json from API: " + apiResult.toString()).setUserMessage("Could not retrieve relation meta data from API. Please delete relations associated with this app, then try re-pushing. If problem persists, please contact support@zillabyte.com.");
-      }
 
-    } catch (APIException e) {
-      throw (OperationException)new OperationException(this, e).setAllMessages("Could not get relation '" + _relation.name() + "' from API!");
+    _config.set("buffer_type", "s3"); // TODO: Generic sink types?
+    JSONObject apiResult = RelationsHelper.instance().postRelationConfigForNextVersion(_config, _relation.name(), _relation.valueColumns());
+
+    if(apiResult.containsKey("buffer_settings")){
+      bufferSettings = apiResult.getJSONObject("buffer_settings");
+    } else {
+      throw new RuntimeException("Did not get bufferSettings json from API: " + apiResult.toString());
     }
+
     _log.info("Got bufferSettings from API: " + bufferSettings.toString());
     JSONObject sourceSettings = bufferSettings.getJSONObject("source");
     JSONObject sourceConfig =  sourceSettings.getJSONObject("config");
@@ -180,7 +170,7 @@ public class SinkToBuffer extends Sink {
     while(!bufferService.hasTopic(_topicName)){
       waitRetry += 1;
       if(waitRetry > 30){
-        throw (OperationException) new OperationException(this, "Kafka topic wasn't created in 30 seconds. It's likely that metamorphosis screwed up.").setUserMessage("Something is wrong with our internal data-writing system. Please report this error to support@zillabyte.com. Thanks and sorry for the inconvenience!");
+        throw new RuntimeException("Kafka topic wasn't created in 30 seconds. It's likely that metamorphosis screwed up.");
       }
       _log.info("Waiting for the topic " + _topicName + " to be created. Attempt #" + waitRetry);
       Utils.sleep(1000); // This is before we deploy the topology to storm. 
@@ -188,7 +178,7 @@ public class SinkToBuffer extends Sink {
     
   }
 
-  private void initProducer() throws OperationException {
+  private void initProducer() throws LoopException {
     _producer = Universe.instance().bufferClientFactory().createProducer(this);
   }
   

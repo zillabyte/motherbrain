@@ -53,17 +53,16 @@ public class UrlHelper {
   }
 
 
-  public static String fetchWebBody(String rawUrl) throws IOException {
-      
-    // Logger.debug("Fetching: " + rawUrl);
-    URL url = new URL(rawUrl);
-    URLConnection con = url.openConnection();
-    con.setConnectTimeout(10 * 1000);
-    con.setReadTimeout(15 * 1000);
+  public static String fetchWebBody(String rawUrl) {
     
     try{
+      URL url = new URL(rawUrl);
+      URLConnection con = url.openConnection();
+      con.setConnectTimeout(10 * 1000);
+      con.setReadTimeout(15 * 1000);
+      
       if (con.getContentType() == null) {
-        throw new IOException("can't connect: " + rawUrl);
+        throw new RuntimeException("Can't connect: " + rawUrl);
       }
       if (con.getContentType().contains("text/html")) {
         // success
@@ -72,23 +71,23 @@ public class UrlHelper {
       } else if (con.getContentType().contains("application/json")) {
         // success
       } else {
-        throw new IOException("not text/html " + con.getContentType() + " : " + rawUrl);
+        throw new RuntimeException("Not text/html " + con.getContentType() + " : " + rawUrl);
       }
-    }catch(IllegalArgumentException e){
-      throw new IOException("bad url: " + rawUrl);
+           
+      final InputStream in = con.getInputStream();
+      try {
+        String encoding = con.getContentEncoding();
+        encoding = encoding == null ? "UTF-8" : encoding;
+        String body = IOUtils.toString(in, encoding);
+        assert (body != null);
+        return body;
+      } finally {
+        in.close();
+      }  
+    } catch(IllegalArgumentException | IOException e) {
+      throw new RuntimeException("Bad url: " + rawUrl);
     }
-    
-    
-    final InputStream in = con.getInputStream();
-    try {
-      String encoding = con.getContentEncoding();
-      encoding = encoding == null ? "UTF-8" : encoding;
-      String body = IOUtils.toString(in, encoding);
-      assert (body != null);
-      return body;
-    } finally {
-      in.close();
-    }    
+      
   }
   	
   	

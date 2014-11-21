@@ -3,7 +3,6 @@ package com.zillabyte.motherbrain.flow.buffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeoutException;
 
 import net.sf.json.JSONObject;
 
@@ -12,17 +11,12 @@ import org.apache.log4j.Logger;
 import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.Nullable;
 
-import com.google.monitoring.runtime.instrumentation.common.com.google.common.base.Throwables;
-import com.zillabyte.motherbrain.api.APIException;
 import com.zillabyte.motherbrain.api.RelationsHelper;
-import com.zillabyte.motherbrain.coordination.CoordinationException;
 import com.zillabyte.motherbrain.flow.MapTuple;
-import com.zillabyte.motherbrain.flow.StateMachineException;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.collectors.coordinated.CoordinatedOutputCollector;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.flow.operations.Source;
-import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangException;
 import com.zillabyte.motherbrain.flow.tests.helpers.MockInstanceHelper;
 import com.zillabyte.motherbrain.relational.AliasedQuery;
 import com.zillabyte.motherbrain.relational.BufferQuery;
@@ -58,36 +52,31 @@ public class SourceFromBuffer extends Source {
 
     super(operationName);
     _bufferName = bufferName;
-    
 
-    try {
-      Query query = RelationsHelper.instance().concretifyQuery(flowId, bufferName, authToken);
-      if(query instanceof BufferQuery){ 
-        _query = (BufferQuery) query;
-        Universe.instance().bufferService().maybeFillBuffer((BufferQuery) query);
+    Query query = RelationsHelper.instance().concretifyQuery(flowId, bufferName, authToken);
+    if(query instanceof BufferQuery){ 
+      _query = (BufferQuery) query;
+      Universe.instance().bufferService().maybeFillBuffer((BufferQuery) query);
 
-      }
-      else if(query instanceof AliasedQuery){
-        _operationLogger.info("Unsupported dataset.");
-        _log.error("Relation is on redshift. We have to offload it.");
-        //TODO: Migrate redshift relation to kafka.
-
-        throw new NotImplementedException("Cannot source from this relation at this time.");
-      }else {
-        _operationLogger.info("Unsupported dataset.");
-        _log.error("Unsupported data set.");
-        throw new NotImplementedException("Cannot source from this relation at this time.");
-
-      }
-      
-    } catch (APIException | InterruptedException e) {
-      Throwables.propagate(e);
     }
+    else if(query instanceof AliasedQuery){
+      _operationLogger.info("Unsupported dataset.");
+      _log.error("Relation is on redshift. We have to offload it.");
+      //TODO: Migrate redshift relation to kafka.
+
+      throw new NotImplementedException("Cannot source from this relation at this time.");
+    }else {
+      _operationLogger.info("Unsupported dataset.");
+      _log.error("Unsupported data set.");
+      throw new NotImplementedException("Cannot source from this relation at this time.");
+
+    }
+ 
     _batch = 1;
   }
 
   @Override
-  public void onBeginCycle(OutputCollector output) throws InterruptedException, OperationException, CoordinationException, StateMachineException, TimeoutException {
+  public void onBeginCycle(OutputCollector output) {
     super.onBeginCycle(output);
     if (_batch != null) {
       if (output instanceof CoordinatedOutputCollector) {
@@ -98,7 +87,7 @@ public class SourceFromBuffer extends Source {
 
 
   @Override
-  protected synchronized boolean nextTuple(OutputCollector output) throws OperationException, InterruptedException {
+  protected synchronized boolean nextTuple(OutputCollector output) throws LoopException {
     if(_consumer == null){
       _consumer = Universe.instance().bufferClientFactory().createConsumer(this);
     }
@@ -120,7 +109,7 @@ public class SourceFromBuffer extends Source {
 
 
   @Override
-  public void onFinalizeDeclare() throws OperationException, InterruptedException {
+  public void onFinalizeDeclare() {
     super.onFinalizeDeclare();
     initConsumer(); 
   }
@@ -139,12 +128,12 @@ public class SourceFromBuffer extends Source {
   }
   
 
-  public @NonNull List<ColumnDef> getValueColumnDefs() throws OperationException, InterruptedException {
+  public @NonNull List<ColumnDef> getValueColumnDefs() {
     return _query.valueColumns();
   }
 
   @Override
-  public Map<String, String> getAliases() throws OperationException, InterruptedException {
+  public Map<String, String> getAliases() {
     final HashMap<String, String> map = new HashMap<>();
     for (ColumnDef cd : getValueColumnDefs()) {
       for (String alias : cd.getAliases()) {
@@ -158,7 +147,7 @@ public class SourceFromBuffer extends Source {
 
 
   @Override
-  public void prepare() throws MultiLangException, OperationException, InterruptedException {
+  public void prepare() {
     super.prepare();
     MockInstanceHelper.registerInstance(this);
   }
@@ -170,7 +159,7 @@ public class SourceFromBuffer extends Source {
   }
 
   @Override
-  public void handlePause() throws OperationException{
+  public void handlePause() {
     super.handlePause();
   }
 

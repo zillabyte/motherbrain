@@ -5,7 +5,7 @@ import net.sf.json.JSONObject;
 import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.operations.Function;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 
 public class RateLimiter extends Function {
 
@@ -25,7 +25,7 @@ public class RateLimiter extends Function {
 
   
   @Override
-  protected void process(MapTuple t, OutputCollector c) throws OperationException, InterruptedException {
+  protected void process(MapTuple t, OutputCollector c) throws LoopException {
     if (_allowancesPerSecond != null && _allowancesPerSecond == 0.0) {
       _sleeper.sleepFor((long) (1.0 / _allowancesPerSecond));
     }

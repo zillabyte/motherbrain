@@ -52,7 +52,7 @@ public final class MockQueueFactory implements QueueFactory {
     private static final long serialVersionUID = -9068751590216675151L;
 
     @Override
-    public RPCRequest getNextRequest() throws InterruptedException {
+    public RPCRequest getNextRequest() {
       final RPCRequest request = _inputs.poll();
       return request;
     }

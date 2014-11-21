@@ -13,6 +13,7 @@ import com.google.common.base.Throwables;
 import com.google.common.io.Files;
 import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.operations.AggregationOperation;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.universe.Universe;
 import com.zillabyte.motherbrain.utils.Utils;
 
@@ -92,7 +93,7 @@ public class DiskBackedStore implements AggregationStore {
 
 
   @Override
-  public void addToGroup(Object batchId, AggregationKey key, MapTuple tuple) {
+  public void addToGroup(Object batchId, AggregationKey key, MapTuple tuple) throws LoopException {
 
 
     // add key if necessary
@@ -116,7 +117,7 @@ public class DiskBackedStore implements AggregationStore {
 
 
   @Override
-  public boolean hasGroup(Object batch, AggregationKey key) {
+  public boolean hasGroup(Object batch, AggregationKey key) throws LoopException {
     File f = new File(keyPath(batch, key));
     return f.exists() && f.isDirectory() && (f.listFiles() != null);
     // return _map.containsKey(key);
@@ -124,7 +125,7 @@ public class DiskBackedStore implements AggregationStore {
 
 
   @Override
-  public Iterator<MapTuple> getGroupIterator(Object batch, AggregationKey key) {
+  public Iterator<MapTuple> getGroupIterator(Object batch, AggregationKey key) throws LoopException {
     // return a custom Iterator that incrementally reads the next tuples
     TuplePage page = new TuplePage(keyPath(batch, key));
     return page.iterator();
@@ -132,7 +133,7 @@ public class DiskBackedStore implements AggregationStore {
 
 
   @Override
-  public void deleteGroup(Object batch, AggregationKey key) {
+  public void deleteGroup(Object batch, AggregationKey key) throws LoopException {
     File keyDir = new File(keyPath(batch, key));
     if (keyDir.exists()) {
       for (File f : keyDir.listFiles()){
@@ -144,7 +145,7 @@ public class DiskBackedStore implements AggregationStore {
 
 
   @Override
-  public Iterator<AggregationKey> keyIterator(final Object batch) throws AggregationException {
+  public Iterator<AggregationKey> keyIterator(final Object batch) throws LoopException {
 
 
 
@@ -219,16 +220,16 @@ public class DiskBackedStore implements AggregationStore {
 
 
   @Override
-  public void flush(Object batch) {    
+  public void flush(Object batch) throws LoopException {    
   }
 
 
   @Override
-  public void deleteBatch(Object batch) throws AggregationException {
+  public void deleteBatch(Object batch) throws LoopException {
     try {
       FileUtils.deleteDirectory(new File(dataPath(batch)));
     } catch (IOException e) {
-      throw (AggregationException) new AggregationException(e).setUserMessage("Unable to cleanup aggregation data.").adviseRetry();
+      throw new LoopException(_operation, e);
     }
   }
 

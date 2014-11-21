@@ -22,11 +22,10 @@ import com.zillabyte.motherbrain.flow.collectors.coordinated.support.TupleIdGene
 import com.zillabyte.motherbrain.flow.collectors.coordinated.support.TupleIdSet;
 import com.zillabyte.motherbrain.flow.collectors.coordinated.support.naive.NaiveCoordinatedOutputCollectorSupportFactory;
 import com.zillabyte.motherbrain.flow.operations.AggregationOperation;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.flow.operations.Operation;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
 import com.zillabyte.motherbrain.flow.operations.Source;
 import com.zillabyte.motherbrain.flow.rpc.RPCHelper;
-import com.zillabyte.motherbrain.relational.DefaultStreamException;
 import com.zillabyte.motherbrain.universe.Config;
 import com.zillabyte.motherbrain.utils.Utils;
 
@@ -323,7 +322,7 @@ public final class CoordinatedOutputCollector implements OutputCollector {
    * alive.  
    */
   @Override
-  public synchronized ObserveIncomingTupleAction observePreQueuedCoordTuple(Object tuple, Integer originTask) throws OperationException {
+  public synchronized ObserveIncomingTupleAction observePreQueuedCoordTuple(Object tuple, Integer originTask) throws LoopException {
     
     debugIPC("observeIncomingPRE: from=" + originTask + " tuple=" + tuple + " totalCoordTupleCount=" + _coordinationTuplesReceived);
     
@@ -361,11 +360,11 @@ public final class CoordinatedOutputCollector implements OutputCollector {
   
   
   /**
-   * @throws OperationException **
+   * @throws LoopException **
    * 
    */
   @Override
-  public synchronized ObserveIncomingTupleAction observePostQueuedCoordTuple(Object tuple, Integer originTask) throws OperationException {
+  public synchronized ObserveIncomingTupleAction observePostQueuedCoordTuple(Object tuple, Integer originTask) throws LoopException {
     
     debugIPC("["+_operation.instanceName()+", taskId="+_taskId+"] observeIncomingPOST: from=" + originTask + " tuple=" + tuple + " totalCoordTupleCount=" + _coordinationTuplesReceived);
     _emittedInThisSession = 0;
@@ -704,7 +703,7 @@ public final class CoordinatedOutputCollector implements OutputCollector {
     tracker.setBatchState(BatchState.COMPLETING);
     try {
       this._operation.onBatchCompleting(tracker.getBatch());
-    } catch (OperationException e) {
+    } catch (LoopException e) {
       Throwables.propagate(e);
     }
     
@@ -902,7 +901,7 @@ public final class CoordinatedOutputCollector implements OutputCollector {
       
       // Are all tuples dying?  
       if (tracker.getFailedTupleCount(outTask) > FAILED_TUPLE_ABSOLUTE_LIMIT && FAILED_TUPLE_ABSOLUTE_LIMIT != -1) {
-        throw new DeadNodeDetectedException("The task="+outTask+" appears to be dead. Tuples sent to it have failed more than " + tracker.getFailedTupleCount(outTask) + " times");
+        throw new RuntimeException("The task="+outTask+" appears to be dead. Tuples sent to it have failed more than " + tracker.getFailedTupleCount(outTask) + " times");
       }
       
       // Are a percentage of tuples dying? 
@@ -911,14 +910,14 @@ public final class CoordinatedOutputCollector implements OutputCollector {
       if (den > FAILED_TUPLE_PERCENTAGE_MINIMUM && FAILED_TUPLE_PERCENTAGE_MINIMUM > 0) {
         double p = num / den;
         if (p > FAILED_TUPLE_PERCENTAGE && FAILED_TUPLE_PERCENTAGE != -1) {
-          throw new DeadNodeDetectedException("The task="+outTask+" appears to be dead. Tuples sent to it have failed more than " + p + "% of the time.");
+          throw new RuntimeException("The task="+outTask+" appears to be dead. Tuples sent to it have failed more than " + p + "% of the time.");
         }
       }
       
       // Sanity... are we getting any BATCH_COMPLETE acks?  
       int attempts = tracker.getDownstreamBatchCompleteAttempts(outTask);
       if (attempts > FAILED_BATCH_ACK_DETECTED_COUNT_LIMIT && FAILED_BATCH_ACK_DETECTED_COUNT_LIMIT != -1) {
-        throw new DeadNodeDetectedException("The task="+outTask+" appears to be dead. It has not responded to any BATCH_COMPLETE messages after " + attempts + " attempts");
+        throw new RuntimeException("The task="+outTask+" appears to be dead. It has not responded to any BATCH_COMPLETE messages after " + attempts + " attempts");
       }
       
     }
@@ -981,7 +980,7 @@ public final class CoordinatedOutputCollector implements OutputCollector {
    * 
    */
   @Override
-  public synchronized void emit(String streamName, MapTuple tuple) throws OperationException {
+  public synchronized void emit(String streamName, MapTuple tuple) throws LoopException {
     emitImpl(_operation.prefixifyStreamName(streamName), tuple);
   }
   
@@ -990,12 +989,8 @@ public final class CoordinatedOutputCollector implements OutputCollector {
    * 
    */
   @Override
-  public synchronized void emit(MapTuple t) throws OperationException {
-    try {
-      this.emitImpl(_delegate.getDefaultStream(), t);
-    } catch (DefaultStreamException e) {
-      throw (OperationException) new OperationException(_operation, e).setUserMessage("No emit stream given for operation \""+_operation.namespaceName()+"\".");
-    }
+  public synchronized void emit(MapTuple t) throws LoopException {
+    this.emitImpl(_delegate.getDefaultStream(), t);
   }
   
   
@@ -1003,7 +998,7 @@ public final class CoordinatedOutputCollector implements OutputCollector {
   /***
    * 
    */
-  private synchronized void emitImpl(String streamName, MapTuple tuple) throws OperationException {
+  private synchronized void emitImpl(String streamName, MapTuple tuple) throws LoopException {
     
     Benchmark.markBegin("coordinated.collector.emit");
     try {
@@ -1124,7 +1119,7 @@ public final class CoordinatedOutputCollector implements OutputCollector {
    * 
    */
   @Override
-  public synchronized String getDefaultStream() throws DefaultStreamException {
+  public synchronized String getDefaultStream() {
     return _delegate.getDefaultStream();
   }
 
@@ -1148,11 +1143,11 @@ public final class CoordinatedOutputCollector implements OutputCollector {
 
   
   /**
-   * @throws OperationException *
+   * @throws LoopException *
    * 
    */
   @Override
-  public synchronized void onAfterTuplesEmitted() throws OperationException {
+  public synchronized void onAfterTuplesEmitted() throws LoopException {
     debug("onAfterTuplesEmitted");
     
     BatchTracker tracker = getTrackerForBatch(_currentBatch);

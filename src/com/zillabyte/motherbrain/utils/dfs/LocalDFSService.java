@@ -8,12 +8,10 @@ import java.util.List;
 
 import org.apache.commons.io.IOUtils;
 import org.codehaus.plexus.util.FileUtils;
-import org.jets3t.service.S3ServiceException;
 
 import com.google.common.collect.Lists;
 import com.google.monitoring.runtime.instrumentation.common.com.google.common.base.Throwables;
 import com.google.monitoring.runtime.instrumentation.common.com.google.common.io.Files;
-import com.zillabyte.motherbrain.universe.S3Exception;
 import com.zillabyte.motherbrain.utils.Utils;
 
 
@@ -50,15 +48,19 @@ public class LocalDFSService implements DFSService{
   }
     
   @Override
-  public void writeFile(String path, byte[] content) throws IOException, InterruptedException {
+  public void writeFile(String path, byte[] content) {
     File f = prefixify(path);
     System.err.println(f.getAbsolutePath());
-    FileOutputStream output = new FileOutputStream(f);
-    IOUtils.write(content, output);
+    try {
+      FileOutputStream output = new FileOutputStream(f);
+      IOUtils.write(content, output);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override
-  public List<String> listPath(String path) throws S3ServiceException, S3Exception {
+  public List<String> listPath(String path) {
     File dir = prefixify(path);
     File[] dirFiles = dir.listFiles();
     List<String> stringFiles = Lists.newArrayList();
@@ -70,15 +72,19 @@ public class LocalDFSService implements DFSService{
   
   
   @Override
-  public byte[] readFile(String path) throws IOException {
-    FileInputStream input = new FileInputStream(prefixify(path));
-    return IOUtils.toByteArray(input);
+  public byte[] readFile(String path) {
+    try {
+      FileInputStream input = new FileInputStream(prefixify(path));
+      return IOUtils.toByteArray(input);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
   
 
 
   @Override
-  public boolean pathExists(String path) throws S3Exception {
+  public boolean pathExists(String path) {
     File file = prefixify(path);
     if(file.exists()) return true;
     return false;
@@ -87,7 +93,7 @@ public class LocalDFSService implements DFSService{
   
 
   @Override
-  public void maybeCreateDirectory(String path) throws IOException, S3Exception, InterruptedException {
+  public void maybeCreateDirectory(String path) {
     File dir = prefixify(path);
     dir.mkdirs();
   }
@@ -95,8 +101,12 @@ public class LocalDFSService implements DFSService{
 
 
   @Override
-  public void copyFile(File fromFile, String toFile) throws IOException {
-    FileUtils.copyFile(fromFile, prefixify(toFile));
+  public void copyFile(File fromFile, String toFile) {
+    try {
+      FileUtils.copyFile(fromFile, prefixify(toFile));
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
   
  

@@ -9,7 +9,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
@@ -18,21 +17,14 @@ import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
 import org.eclipse.jdt.annotation.NonNull;
 
-import com.zillabyte.motherbrain.coordination.CoordinationException;
-import com.zillabyte.motherbrain.coordination.MessageHandler;
 import com.zillabyte.motherbrain.flow.App;
 import com.zillabyte.motherbrain.flow.Component;
-import com.zillabyte.motherbrain.flow.FlowException;
 import com.zillabyte.motherbrain.flow.FlowInstance;
-import com.zillabyte.motherbrain.flow.FlowRecoveryException;
 import com.zillabyte.motherbrain.flow.FlowState;
-import com.zillabyte.motherbrain.flow.StateMachineException;
 import com.zillabyte.motherbrain.flow.config.FlowConfig;
 import com.zillabyte.motherbrain.flow.operations.OperationLogger;
 import com.zillabyte.motherbrain.flow.rpc.RPCHelper;
-import com.zillabyte.motherbrain.universe.ExceptionHandler;
 import com.zillabyte.motherbrain.universe.Universe;
-import com.zillabyte.motherbrain.utils.JarCompilationException;
 import com.zillabyte.motherbrain.utils.Utils;
 
 public class LocalServiceMain {
@@ -80,7 +72,7 @@ public class LocalServiceMain {
    * @throws JarCompilationException 
    * 
    */
-  public static void init() throws Exception {
+  public static void init() {
 
     Universe.instance().topService().init();
 
@@ -180,11 +172,8 @@ public class LocalServiceMain {
           // Done!
           flowLogger.writeLog("RPC deployed.", OperationLogger.LogPriority.STARTUP);
 
-        } catch (InterruptedException e) {
-          flowLogger.error("Interrupted!");
-          return INTERRUPT_ERROR_RETURN_STRING;
-        } catch(MotherbrainException ex) {
-          flowLogger.writeLog(ex.getInternalMessage(), OperationLogger.LogPriority.ERROR);
+        } catch(Exception ex) {
+          flowLogger.writeLog(ex.getMessage(), OperationLogger.LogPriority.ERROR);
           throw ex;
         } finally {
           /*
@@ -295,11 +284,8 @@ public class LocalServiceMain {
           }
           // Done!
           flowLogger.writeLog("App deployed.", OperationLogger.LogPriority.STARTUP);
-        } catch (InterruptedException e) {
-          flowLogger.error("Interrupted!");
-          return INTERRUPT_ERROR_RETURN_STRING;
-        } catch(MotherbrainException ex) {
-          flowLogger.writeLog(ex.getInternalMessage(), OperationLogger.LogPriority.ERROR);
+        } catch(Exception ex) {
+          flowLogger.writeLog(ex.getMessage(), OperationLogger.LogPriority.ERROR);
           throw ex;
         } finally {
           /*
@@ -323,7 +309,6 @@ public class LocalServiceMain {
     } catch (ExecutionException e) {
       log.info("execution exception");
       e.printStackTrace();
-      flowLogger.error(MotherbrainException.getRootUserMessage(e, "Internal cluster error"));
       return "{\"status\": \"error\", \"error_message\": \"execution exception\"}}";
     } finally {
       executor.shutdownNow();
@@ -382,7 +367,7 @@ public class LocalServiceMain {
 
 
 
-  public static void main(String[] args) throws ParseException, JarCompilationException, SQLException, FlowRecoveryException, FlowException, IOException, InterruptedException, StateMachineException, CoordinationException, ExecutionException {
+  public static void main(String[] args) throws ParseException, IOException, InterruptedException, ExecutionException {
 
     // Parse arguments
     LocalCommandLineHelper.printObligatoryCoolBanner();
@@ -392,7 +377,7 @@ public class LocalServiceMain {
     try {
       Utils.executeWithin(INIT_TIMEOUT, new Callable<Void>() {
         @Override
-        public Void call() throws Exception {
+        public Void call() {
           init();
           return null;
         }

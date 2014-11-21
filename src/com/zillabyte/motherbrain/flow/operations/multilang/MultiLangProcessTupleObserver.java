@@ -13,9 +13,8 @@ import com.zillabyte.motherbrain.benchmarking.Benchmark;
 import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.MetaTuple;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 import com.zillabyte.motherbrain.flow.operations.Operation;
-import com.zillabyte.motherbrain.flow.operations.OperationException;
-import com.zillabyte.motherbrain.relational.DefaultStreamException;
 import com.zillabyte.motherbrain.universe.Config;
 import com.zillabyte.motherbrain.utils.JSONUtil;
 import com.zillabyte.motherbrain.utils.Utils;
@@ -59,7 +58,7 @@ public class MultiLangProcessTupleObserver implements MultiLangMessageHandler {
    * @throws InterruptedException 
    */
   @Deprecated
-  public MultiLangProcessTupleObserver collectTuplesUntilDone(OutputCollector collector) throws OperationException, InterruptedException {
+  public MultiLangProcessTupleObserver collectTuplesUntilDone(OutputCollector collector) throws LoopException {
 
     // Collect
     while( collectNextTuple(collector) ) {}
@@ -77,11 +76,13 @@ public class MultiLangProcessTupleObserver implements MultiLangMessageHandler {
    * @return T if we have more tuples, F otherwise
    * @throws InterruptedException 
    */
-  public boolean collectNextTuple(OutputCollector collector) throws OperationException, InterruptedException {
+  public boolean collectNextTuple(OutputCollector collector) throws LoopException {
 
     // Collect
-    if (_watching == false) throw new OperationException(_operation, "not watching");
-    Object p = this.takeNextTuple();
+    if (_watching == false) throw new LoopException(_operation, "not watching");
+    Object p;
+    p = this.takeNextTuple();
+    
     if (p == DONE_MARKER) {
       return false;
     } else if (p instanceof Pair) {
@@ -96,9 +97,9 @@ public class MultiLangProcessTupleObserver implements MultiLangMessageHandler {
         return true;
       }
     } else if (p instanceof Exception) {
-      throw (OperationException) new OperationException(_operation, (Exception)p).setAllMessages("An error occurred while emitting a tuple.");
+      throw new LoopException(_operation, (Exception) p);
     }  
-    throw (OperationException) new OperationException(_operation).setAllMessages("The operation emitted data of uninterpretable type: "+p.getClass().getName()+".");
+    throw new LoopException(_operation, "The operation emitted data of uninterpretable type: "+p.getClass().getName()+".");
   }
 
   
@@ -106,18 +107,18 @@ public class MultiLangProcessTupleObserver implements MultiLangMessageHandler {
 
   /**
    * @throws InterruptedException
-   * @throws OperationException 
+   * @throws LoopException 
    * 
    */
-  public MultiLangProcessTupleObserver waitForDoneMessageWithoutCollecting() throws InterruptedException, OperationException {
+  public MultiLangProcessTupleObserver waitForDoneMessageWithoutCollecting() throws LoopException {
     
     // Collect
-    if (_watching == false) throw new OperationException(_operation, "not watching");
+    if (_watching == false) throw new RuntimeException("Not watching.");
     while(this.takeNextTuple() != DONE_MARKER) {
       // Do nothing. wait for null.
       throwUnhandledErrors();
     }
-    
+
     // Done
     return this;
   }
@@ -134,7 +135,7 @@ public class MultiLangProcessTupleObserver implements MultiLangMessageHandler {
   
   
   @Override
-  public void handleMessage(String line) throws OperationException {
+  public void handleMessage(String line) throws LoopException {
     
     Benchmark.markBegin("multilang.observer.handle_message");
     try { 
@@ -156,11 +157,7 @@ public class MultiLangProcessTupleObserver implements MultiLangMessageHandler {
         // Get the stream
         String streamName = obj.optString("stream", null);
         if (streamName == null || streamName.equals("null")) { // <- wierd json parse thing/bug
-          try {
-            streamName = _operation.defaultStream();
-          } catch (DefaultStreamException e) {
-            throw (OperationException) new OperationException(_operation, e).setAllMessages("Attempted to emit to non-existent default stream.");
-          }
+          streamName = _operation.defaultStream();
         }
         
         // Extract the tuple
@@ -211,9 +208,7 @@ public class MultiLangProcessTupleObserver implements MultiLangMessageHandler {
       // Failure? 
       if (obj.getString("command").equalsIgnoreCase("fail")) {
         _queue.add(
-            new MultiLangProcessException(_proc)
-              .setUserMessage(obj.getString("msg"))
-              .setInternalMessage(obj.getString("msg"))
+            new LoopException(_operation, obj.getString("msg"))
             );
       }
     } finally {
@@ -227,17 +222,19 @@ public class MultiLangProcessTupleObserver implements MultiLangMessageHandler {
    * @return Next tuple; Null if 'done' has been processed
    * @throws InterruptedException 
    */
-  public Object takeNextTuple(long timeout, TimeUnit unit) throws InterruptedException {
+  public Object takeNextTuple(long timeout, TimeUnit unit) throws LoopException {
     Benchmark.markBegin("multilang.observer.take_next_tuple.poll");
     try { 
       return this._queue.poll(timeout, unit);
+    } catch (InterruptedException e) {
+      throw new LoopException(_operation, e);
     } finally {
       Benchmark.markEnd("multilang.observer.take_next_tuple.poll");
     }
   }
   
-  public Object takeNextTuple() throws InterruptedException, OperationException {
-    if (_watching == false) throw new OperationException(_operation, "not watching");
+  public Object takeNextTuple() throws LoopException {
+    if (_watching == false) throw new LoopException(_operation, "not watching");
     Object p;
     do {
       
@@ -249,14 +246,14 @@ public class MultiLangProcessTupleObserver implements MultiLangMessageHandler {
 
     // If we timeout above and not in paused state, something is likely wrong.
     if (p == null) {
-      throw (OperationException) new OperationException(_operation).setAllMessages("Timeout waiting for multilang process to emit a tuple or DONE signal.");
+      throw (LoopException) new LoopException(_operation, "Timeout waiting for multilang process to emit a tuple or DONE signal.");
     }
     // Done
     throwUnhandledErrors();
     return p;
   }
   
-  private void throwUnhandledErrors() throws OperationException {
+  private void throwUnhandledErrors() throws LoopException {
     // Do we have any unreported errors?
     for(MultiLangErrorHandler eh : this._proc.getErrorListeners()) {
       eh.maybeThrowNextError();

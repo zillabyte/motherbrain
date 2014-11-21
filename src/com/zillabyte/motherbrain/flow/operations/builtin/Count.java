@@ -7,7 +7,7 @@ import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.aggregation.Aggregator;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.operations.GroupBy;
-import com.zillabyte.motherbrain.top.MotherbrainException;
+import com.zillabyte.motherbrain.flow.operations.LoopException;
 
 public class Count extends GroupBy implements Aggregator  {
 
@@ -28,18 +28,18 @@ public class Count extends GroupBy implements Aggregator  {
 
 
   @Override
-  public void start(MapTuple newGroupFieldValues) throws MotherbrainException, InterruptedException {
+  public void start(MapTuple newGroupFieldValues) throws LoopException {
     _count  = 0L;
     _values = newGroupFieldValues;
   }
 
   @Override
-  public void aggregate(MapTuple t, OutputCollector c) throws MotherbrainException, InterruptedException {
+  public void aggregate(MapTuple t, OutputCollector c) throws LoopException {
     _count++;
   }
 
   @Override
-  public void complete(OutputCollector c) throws MotherbrainException, InterruptedException {
+  public void complete(OutputCollector c) throws LoopException {
     _values.put("count", _count);
     c.emit(_values);
   }
