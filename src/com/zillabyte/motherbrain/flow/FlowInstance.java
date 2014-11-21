@@ -575,24 +575,25 @@ public class FlowInstance implements Serializable {
       @Override
       public Void call() {
 
-        String snapshotJSON = null;
-        if(Universe.instance().dfsService().pathExists(dfsSnapshotKey())) {
-          snapshotJSON = Universe.instance().dfsService().readFileAsString(dfsSnapshotKey());
-        }
+        try {
+          String snapshotJSON = Universe.instance().dfsService().readFileAsString(dfsSnapshotKey());
 
-        if (snapshotJSON != null) {
-          _log.info("found snapshot, applying...");
-          JSONObject snapshot = JSONUtil.parseObj(snapshotJSON);
-          applySnapshot(snapshot);
-          _log.info("applied snapshot");
+          if (snapshotJSON != null) {
+            _log.info("found snapshot, applying...");
+            JSONObject snapshot = JSONUtil.parseObj(snapshotJSON);
+            applySnapshot(snapshot);
+            _log.info("applied snapshot");
 
-          // Delete old snapshot
-          _log.info("deleting old snapshot...");
+            // Delete old snapshot
+            _log.info("deleting old snapshot...");
 
-          Universe.instance().dfsService().deleteFile(dfsSnapshotKey());
+            Universe.instance().dfsService().deleteFile(dfsSnapshotKey());
 
-          _log.info("deleted snapshot");
+            _log.info("deleted snapshot");
 
+          }
+        } catch (Exception e) {
+          return null;
         }
 
         return null;

@@ -58,6 +58,6 @@ public interface Container extends Serializable {
   
   public void cacheFlow(Flow flow);
   
-  public Flow maybeGetCachedFlow(String id, Integer version) throws CachedFlowException;
+  public Flow maybeGetCachedFlow(String id, Integer version);
 
 }
