@@ -34,33 +34,26 @@ public class LocalDFSService implements DFSService{
     this("");
   }
   
-  private File prefixify(String path) {
+  private File prefixify(String path) throws IOException {
     if(path.startsWith("/tmp") || path.startsWith("/mnt")) {
       Utils.TODO("if you see this error, go bug jake about it.");
     }
     File f = new File(_root, path);
-    try {
-      Files.createParentDirs(f);
-    } catch (IOException e) {
-      Throwables.propagate(e);
-    }
+    Files.createParentDirs(f);
     return f;
   }
     
   @Override
-  public void writeFile(String path, byte[] content) {
+  public void writeFile(String path, byte[] content) throws IOException {
     File f = prefixify(path);
     System.err.println(f.getAbsolutePath());
-    try {
-      FileOutputStream output = new FileOutputStream(f);
-      IOUtils.write(content, output);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+
+    FileOutputStream output = new FileOutputStream(f);
+    IOUtils.write(content, output);
   }
 
   @Override
-  public List<String> listPath(String path) {
+  public List<String> listPath(String path) throws IOException {
     File dir = prefixify(path);
     File[] dirFiles = dir.listFiles();
     List<String> stringFiles = Lists.newArrayList();
@@ -72,19 +65,15 @@ public class LocalDFSService implements DFSService{
   
   
   @Override
-  public byte[] readFile(String path) {
-    try {
-      FileInputStream input = new FileInputStream(prefixify(path));
-      return IOUtils.toByteArray(input);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+  public byte[] readFile(String path) throws IOException {
+    FileInputStream input = new FileInputStream(prefixify(path));
+    return IOUtils.toByteArray(input);
   }
   
 
 
   @Override
-  public boolean pathExists(String path) {
+  public boolean pathExists(String path) throws IOException {
     File file = prefixify(path);
     if(file.exists()) return true;
     return false;
@@ -93,7 +82,7 @@ public class LocalDFSService implements DFSService{
   
 
   @Override
-  public void maybeCreateDirectory(String path) {
+  public void maybeCreateDirectory(String path) throws IOException {
     File dir = prefixify(path);
     dir.mkdirs();
   }
@@ -101,24 +90,20 @@ public class LocalDFSService implements DFSService{
 
 
   @Override
-  public void copyFile(File fromFile, String toFile) {
-    try {
-      FileUtils.copyFile(fromFile, prefixify(toFile));
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+  public void copyFile(File fromFile, String toFile) throws IOException {
+    FileUtils.copyFile(fromFile, prefixify(toFile));
   }
   
  
   
   @Override
-  public void deleteFile(String path) {
+  public void deleteFile(String path) throws IOException {
     File file = prefixify(path);
     file.delete();
   }
 
   @Override
-  public String getUriFor(String path) {
+  public String getUriFor(String path) throws IOException {
     return "file://" + prefixify(path).getAbsolutePath();
   }
   
