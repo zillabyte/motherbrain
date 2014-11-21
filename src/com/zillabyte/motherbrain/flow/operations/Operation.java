@@ -375,6 +375,7 @@ public abstract class Operation implements Serializable {
   public OperationLogger logger() {
     return _operationLogger;
   }
+  
 
   public Heartbeat getHeartbeat() {
     return _heartbeat;
@@ -731,7 +732,8 @@ public abstract class Operation implements Serializable {
 
   public void handleFatalError(Throwable e) throws OperationException, FakeLocalException {
     if(e instanceof MotherbrainException) {
-      _operationLogger.writeLog( "FATAL ERROR: "+MotherbrainException.getRootUserMessage(e, "Internal cluster error. Please try 'zillabyte errors'."), OperationLogger.LogPriority.ERROR);
+      _operationLogger.writeLog("FATAL ERROR:", OperationLogger.LogPriority.ERROR);
+      _operationLogger.logError((Exception) e);
     }
     this._errorStrategy.handleFatalError(e);
   }
@@ -739,7 +741,8 @@ public abstract class Operation implements Serializable {
 
   public void handleLoopError(Throwable e) throws OperationException, FakeLocalException {
     if(e instanceof MotherbrainException) {
-      _operationLogger.writeLog( "LOOP ERROR (WARNING): "+MotherbrainException.getRootUserMessage(e, "Internal cluster error. Please try 'zillabyte errors'."), OperationLogger.LogPriority.ERROR);
+      _operationLogger.writeLog("LOOP ERROR/WARNING:", OperationLogger.LogPriority.ERROR);
+      _operationLogger.logError((Exception) e);
     }
     this._errorStrategy.handleLoopError(e);
   }

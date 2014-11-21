@@ -178,6 +178,11 @@ public class Universe implements Serializable {
     return this._shellFactory;
   }
 
+  public ExceptionHandler exceptionHandler() {
+    return this._exceptionHandler;
+  }
+
+  
   public static Universe instance() {
     if (_instance == null) throw new IllegalStateException("Universe has not been created!");
     return _instance;
@@ -186,7 +191,6 @@ public class Universe implements Serializable {
   static synchronized void setInstance(Universe uni) {
     _instance = uni;
   }
-
 
   public synchronized static void maybeCreate(Universe uni) {
     if (_instance == null) {
