@@ -76,7 +76,6 @@ public class WorkerThrowsErrorPercentageAndAbsoluteOperationErrorStrategy implem
     
     // Init 
     _log.error("fatalError: " + error + " [stacktrace]: " + ExceptionUtils.getFullStackTrace(error));
-    _op.logger().error( MotherbrainException.getRootUserMessage(error, "Fatal internal cluster error") );
     _fatalError = error;
     
     try {
@@ -116,9 +115,6 @@ public class WorkerThrowsErrorPercentageAndAbsoluteOperationErrorStrategy implem
     if (error instanceof InterruptedException) {
       Throwables.propagate(error);
     }
-    
-    // Log to the user... 
-    _op.logger().error( MotherbrainException.getRootUserMessage(error, "Internal cluster error") );
 
     // Have we seen enough errors?
     long  loopCalls = _op.getLoopCalls();

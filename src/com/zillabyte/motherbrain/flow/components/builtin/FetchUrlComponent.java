@@ -84,7 +84,7 @@ public class FetchUrlComponent {
               try {
                 // Are we dealing with a non-text type? 
                 if (response.getContentType() != null && response.getContentType().contains("text") == false) {
-                  logger().error("skipping " + url.toString() + " because it is not text");
+                  logger().error("Skipping " + url.toString() + " because it is not text.");
                   return null;
                 }
                 
@@ -110,7 +110,7 @@ public class FetchUrlComponent {
             @Override
             public void onThrowable(Throwable e){
               latch.countDown();
-              logger().error("unable to fetch: " + url.toString() + " (" + e.getMessage() + ")");
+              logger().error("Unable to fetch: " + url.toString() + " (" + e.getMessage() + ")");
               e.printStackTrace();
             }
             
@@ -118,7 +118,7 @@ public class FetchUrlComponent {
             public STATE onBodyPartReceived(HttpResponseBodyPart bodyPart) throws Exception {
               _size += bodyPart.length();
               if (_size > MAX_BODY_SIZE) {
-                logger().error("skipping " + url.toString() + " because it is too large");
+                logger().error("Skipping " + url.toString() + " because it is too large.");
                 return STATE.ABORT;
               }
               return super.onBodyPartReceived(bodyPart);
