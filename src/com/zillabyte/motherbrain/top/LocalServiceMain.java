@@ -120,7 +120,7 @@ public class LocalServiceMain {
             return LOCK_ERROR_RETURN_STRING;
           }
         } catch (InterruptedException e) {
-          flowLogger.error("Interrupted!");
+          flowLogger.logError(e);
           return INTERRUPT_ERROR_RETURN_STRING;
         }
         try {
@@ -236,7 +236,7 @@ public class LocalServiceMain {
             return LOCK_ERROR_RETURN_STRING;
           }
         } catch (InterruptedException e) {
-          flowLogger.error("Interrupted!");
+          flowLogger.logError(e);
           return INTERRUPT_ERROR_RETURN_STRING;
         }
         try {

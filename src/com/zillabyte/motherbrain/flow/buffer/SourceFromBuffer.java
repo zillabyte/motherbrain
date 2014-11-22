@@ -68,7 +68,7 @@ public class SourceFromBuffer extends Source {
 
       }
       else if(query instanceof AliasedQuery){
-        _operationLogger.info("Unsupported dataset.");
+        _operationLogger.error("Unsupported dataset.");
         _log.error("Relation is on redshift. We have to offload it.");
         //TODO: Migrate redshift relation to kafka.
 

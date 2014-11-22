@@ -937,7 +937,7 @@ public abstract class Operation implements Serializable {
 
   private void applySnapshotIfExists_ThreadUnsafe() {
     // Apply a snapshot if it exists
-    _operationLogger.writeLog("checking for snapshot...", OperationLogger.LogPriority.SYSTEM);
+    _log.info("checking for snapshot...");
 
     try {
       Utils.retryUnchecked(3, new Callable<Void>() {
@@ -947,16 +947,13 @@ public abstract class Operation implements Serializable {
             
             String snapshotJSON = Universe.instance().dfsService().readFileAsString(s3SnapshotKey());
             if (snapshotJSON != null) {
-              _operationLogger.writeLog("found snapshot, applying...", OperationLogger.LogPriority.SYSTEM);
+              _operationLogger.writeLog("Found snapshot, applying...", OperationLogger.LogPriority.SYSTEM);
               JSONObject snapshot = JSONUtil.parseObj(snapshotJSON);
               applySnapshot(snapshot);
-              _operationLogger.writeLog("applied snapshot", OperationLogger.LogPriority.SYSTEM);
+              _log.info("applied snapshot");
 
-              // Delete old snapshot
-              _operationLogger.writeLog("deleting old snapshot...", OperationLogger.LogPriority.SYSTEM);
-              
+              // Delete old snapshot              
               Universe.instance().dfsService().deleteFile(s3SnapshotKey());
-              _operationLogger.writeLog("deleted snapshot", OperationLogger.LogPriority.SYSTEM);
 
             }
           } catch (IOException e) {
@@ -966,7 +963,7 @@ public abstract class Operation implements Serializable {
         }
       });
     } catch (Exception e) {
-      _operationLogger.writeLog("error applying snapshot: " + e.getMessage(), OperationLogger.LogPriority.ERROR);
+      _operationLogger.writeLog("Error applying snapshot: " + e.getMessage(), OperationLogger.LogPriority.ERROR);
     }
   }
 
@@ -1049,8 +1046,7 @@ public abstract class Operation implements Serializable {
    */
   public void handleResume() throws OperationException {
 
-    _operationLogger
-        .writeLog("resuming...", OperationLogger.LogPriority.SYSTEM);
+    _operationLogger.writeLog("Resuming...", OperationLogger.LogPriority.SYSTEM);
 
     // apply snapshot
     applySnapshotIfExists_ThreadUnsafe();
@@ -1240,10 +1236,6 @@ public abstract class Operation implements Serializable {
         });
 
       } catch (ExecutionException e) {
-        logger().error("Critical error in prepare stage for " + instanceName() + ".");
-        if (!Universe.instance().env().isProd()) {
-          logger().error("Internal error: " + ExceptionUtils.getStackTrace(e));
-        }
         handleFatalError(e);
 
       } catch (TimeoutException e) {

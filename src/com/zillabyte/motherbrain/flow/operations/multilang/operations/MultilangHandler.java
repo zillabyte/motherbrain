@@ -119,7 +119,6 @@ public class MultilangHandler implements Serializable {
       _log.info("live run is running...");
 
     } catch (MotherbrainException | InterruptedException | TimeoutException ex) {
-      _operation.logger().writeLog("Internal error while preparing operation", OperationLogger.LogPriority.ERROR);
       throw (MultiLangException) new MultiLangException(_operation, ex).setUserMessage("An error occurred while preparing the operation.").adviseRetry();
     }
   }
