@@ -9,7 +9,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
@@ -19,7 +18,6 @@ import org.apache.log4j.Logger;
 import org.eclipse.jdt.annotation.NonNull;
 
 import com.zillabyte.motherbrain.coordination.CoordinationException;
-import com.zillabyte.motherbrain.coordination.MessageHandler;
 import com.zillabyte.motherbrain.flow.App;
 import com.zillabyte.motherbrain.flow.Component;
 import com.zillabyte.motherbrain.flow.FlowException;
@@ -30,7 +28,6 @@ import com.zillabyte.motherbrain.flow.StateMachineException;
 import com.zillabyte.motherbrain.flow.config.FlowConfig;
 import com.zillabyte.motherbrain.flow.operations.OperationLogger;
 import com.zillabyte.motherbrain.flow.rpc.RPCHelper;
-import com.zillabyte.motherbrain.universe.ExceptionHandler;
 import com.zillabyte.motherbrain.universe.Universe;
 import com.zillabyte.motherbrain.utils.JarCompilationException;
 import com.zillabyte.motherbrain.utils.Utils;
@@ -181,11 +178,8 @@ public class LocalServiceMain {
           flowLogger.writeLog("RPC deployed.", OperationLogger.LogPriority.STARTUP);
 
         } catch (InterruptedException e) {
-          flowLogger.error("Interrupted!");
+          flowLogger.logError(e);
           return INTERRUPT_ERROR_RETURN_STRING;
-        } catch(MotherbrainException ex) {
-          flowLogger.writeLog(ex.getInternalMessage(), OperationLogger.LogPriority.ERROR);
-          throw ex;
         } finally {
           /*
            * Unlock if someone else didn't grab the lock.
@@ -207,9 +201,11 @@ public class LocalServiceMain {
 
     } catch (TimeoutException e) {
       log.info("flow register timeout");
+      flowLogger.logError(e);
       return "{\"status\": \"error\", \"error_message\": \"flow register timeout\"}}";
     } catch (ExecutionException e) {
       log.info("execution exception");
+      flowLogger.logError(e);
       e.printStackTrace();
       return "{\"status\": \"error\", \"error_message\": \"execution exception\"}}";
     } finally {
@@ -296,11 +292,8 @@ public class LocalServiceMain {
           // Done!
           flowLogger.writeLog("App deployed.", OperationLogger.LogPriority.STARTUP);
         } catch (InterruptedException e) {
-          flowLogger.error("Interrupted!");
+          flowLogger.logError(e);
           return INTERRUPT_ERROR_RETURN_STRING;
-        } catch(MotherbrainException ex) {
-          flowLogger.writeLog(ex.getInternalMessage(), OperationLogger.LogPriority.ERROR);
-          throw ex;
         } finally {
           /*
            * Unlock if someone else didn't grab the lock.
@@ -319,11 +312,12 @@ public class LocalServiceMain {
       return future.get(REGISTER_TIMEOUT, TimeUnit.MILLISECONDS);
     } catch (TimeoutException e) {
       log.info("flow register timeout");
+      flowLogger.logError(e);
       return "{\"status\": \"error\", \"error_message\": \"flow register timeout\"}}";
     } catch (ExecutionException e) {
       log.info("execution exception");
+      flowLogger.logError(e);
       e.printStackTrace();
-      flowLogger.error(MotherbrainException.getRootUserMessage(e, "Internal cluster error"));
       return "{\"status\": \"error\", \"error_message\": \"execution exception\"}}";
     } finally {
       executor.shutdownNow();

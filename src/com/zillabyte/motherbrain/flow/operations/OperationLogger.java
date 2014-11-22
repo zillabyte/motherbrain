@@ -58,6 +58,15 @@ public abstract class OperationLogger implements Serializable {
     }
   }
   
+  public void logError(Exception e) {
+    String message = e.getMessage();
+    for(String s : message.split("\\\\n")) { // Apparently we need that many slashes to escape \n
+      writeLog("\t"+s, LogPriority.ERROR);
+    }
+    for(StackTraceElement s : e.getStackTrace()) {
+      writeLog(s.toString(), LogPriority.ERROR);
+    }
+  }
 
   abstract void writeLogInternal(String message, LogPriority priority) throws InterruptedException, OperationLoggerException;
 

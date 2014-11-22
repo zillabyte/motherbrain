@@ -12,7 +12,6 @@ import com.zillabyte.motherbrain.flow.collectors.coordinated.BatchedTuple;
 import com.zillabyte.motherbrain.flow.operations.OperationException;
 import com.zillabyte.motherbrain.flow.operations.Sink;
 import com.zillabyte.motherbrain.flow.rpc.queues.OutputQueue;
-import com.zillabyte.motherbrain.top.MotherbrainException;
 import com.zillabyte.motherbrain.universe.Universe;
 import com.zillabyte.motherbrain.utils.Utils;
 
@@ -48,7 +47,7 @@ public class RPCSink extends Sink {
    * 
    */
   @Override
-  protected void process(MapTuple t) throws InterruptedException, MotherbrainException {
+  protected void process(MapTuple t) throws InterruptedException, OperationException {
     
     // Init 
     log.debug("rpc sinking: " + t);
