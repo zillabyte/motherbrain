@@ -61,7 +61,7 @@ public class SourceFromBuffer extends Source {
     
 
     try {
-      Query query = RelationsHelper.instance().concretifyQuery(flowId, bufferName, authToken);
+      Query query = RelationsHelper.instance().concretifyQuery(bufferName, authToken);
       if(query instanceof BufferQuery){ 
         _query = (BufferQuery) query;
         Universe.instance().bufferService().maybeFillBuffer((BufferQuery) query);
