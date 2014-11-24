@@ -102,7 +102,7 @@ public class SourceFromBuffer extends Source {
     if(_consumer == null){
       _consumer = Universe.instance().bufferClientFactory().createConsumer(this);
     }
-
+int k = 3;
     MapTuple nextTuple = _consumer.getNextTuple();
     if (nextTuple != null) {
       output.emit(nextTuple);

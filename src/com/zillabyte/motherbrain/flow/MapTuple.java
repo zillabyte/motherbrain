@@ -28,30 +28,20 @@ public class MapTuple implements Serializable, ByteSizable {
   public static final MapTuple EMPTY = new MapTuple();
   
   final HashMap<String, Object> _values;
-  final MetaTuple _meta;
   final HashMap<String, String> _aliases;
   
   
-  public MapTuple(final MetaTuple m) {
-    _meta = m;
+  public MapTuple() {
     _values = new HashMap<>();
     _aliases = new HashMap<>(); 
   }
   
   public MapTuple(final MapTuple m) {
-    _meta = m.meta();
     _values = new HashMap<>(m._values);
     _aliases = new HashMap<>(m._aliases);
   }
+
   
-  
-  public MapTuple() {
-    this(new MetaTuple());
-  }
-  
-  public final MetaTuple meta() {
-    return _meta;
-  }
   
   
   public final Map<String, Object> values() {
@@ -62,14 +52,6 @@ public class MapTuple implements Serializable, ByteSizable {
     final Object value = _values.get(field);
     if (value != null) {
       return value;
-    }
-    // Meta field? 
-    if (MetaTuple.confidenceColumn().getName().equals(field)) {
-      return _meta.getConfidence();
-    } else if(MetaTuple.sinceColumn().getName().equals(field)) {
-      return _meta.getSince();
-    } else if(MetaTuple.sourceColumn().getName().equals(field)) {
-      return _meta.getSource();
     }
     return null;
   }
@@ -107,15 +89,10 @@ public class MapTuple implements Serializable, ByteSizable {
     return put(field, obj);
   }
   
-  public final MapTuple setMeta(int index, Serializable obj) {
-    _meta.set(index, obj);
-    return this;  // for chaining
-  }
   
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("{");
     sb.append("{");
     for(Entry<String, Object> e : this._values.entrySet()) {
       sb.append("\"");
@@ -135,26 +112,15 @@ public class MapTuple implements Serializable, ByteSizable {
       sb.append(",");
     }
     sb.append("}");
-    sb.append(",");
-    sb.append( _meta.toString() );
-    sb.append("}");
     final String string = sb.toString();
     assert (string != null);
     return string;
   }
 
-  public final int sizeFull() {
-    return this.sizeValues() + sizeMeta();
-  }
-  
   public final int sizeValues() {
     return this.values().size();
   }
   
-  public final int sizeMeta() {
-    this.meta();
-    return MetaTuple.size();
-  }
 
   public final long getApproxMemSize() {
     // Hacky: we assume strings are the main consumer of memory. 

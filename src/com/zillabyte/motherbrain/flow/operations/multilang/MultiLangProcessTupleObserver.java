@@ -11,7 +11,6 @@ import org.javatuples.Pair;
 
 import com.zillabyte.motherbrain.benchmarking.Benchmark;
 import com.zillabyte.motherbrain.flow.MapTuple;
-import com.zillabyte.motherbrain.flow.MetaTuple;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.operations.Operation;
 import com.zillabyte.motherbrain.flow.operations.OperationException;
@@ -165,14 +164,9 @@ public class MultiLangProcessTupleObserver implements MultiLangMessageHandler {
         
         // Extract the tuple
         JSONObject jsonTuple = obj.getJSONObject("tuple"); 
-        JSONObject meta = obj.optJSONObject("meta");
-        if (meta == null || meta.isNullObject()) meta = new JSONObject();
         
-        // Extract the meta
-        MetaTuple metaTuple = new MetaTuple(meta.optLong("since", System.currentTimeMillis()), Double.valueOf(meta.optDouble("confidence", 1.0)), meta.optString("source", ""));
-    
         // Build the final tuple
-        MapTuple mapTuple = new MapTuple(metaTuple);
+        MapTuple mapTuple = new MapTuple();
         
         // Get the values from the output json record
         for(Object field : jsonTuple.keySet()) {

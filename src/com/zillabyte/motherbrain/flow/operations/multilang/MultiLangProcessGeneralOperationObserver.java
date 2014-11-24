@@ -187,15 +187,9 @@ public class MultiLangProcessGeneralOperationObserver implements MultiLangMessag
    */
   public void sendBeginGroup(MapTuple t) throws MultiLangProcessException, InterruptedException {
     
-    JSONObject meta = new JSONObject();
-    meta.put("confidence", t.meta().getConfidence());
-    meta.put("source", t.meta().getSource());
-    meta.put("date", Long.valueOf(t.meta().getSince().getTime()));
-    
     // CLI
     JSONObject obj = new JSONObject();
     obj.put("command", "begin_group");
-    obj.put("meta", meta);
     obj.put("tuple", t.getValuesJSON());
     
     // _log.info("sending group begin message: " + obj.toString());
@@ -215,15 +209,9 @@ public class MultiLangProcessGeneralOperationObserver implements MultiLangMessag
    */
   public void sendAggregate(MapTuple t, JSONArray aliases) throws MultiLangProcessException, InterruptedException {
     
-    JSONObject meta = new JSONObject();
-    meta.put("confidence", t.meta().getConfidence());
-    meta.put("source", t.meta().getSource());
-    meta.put("date", Long.valueOf(t.meta().getSince().getTime()));
-    
     // CLI
     JSONObject obj = new JSONObject();
     obj.put("command", "aggregate");
-    obj.put("meta", meta);
     obj.put("tuple", t.getValuesJSON());
     
     if (aliases != null) {

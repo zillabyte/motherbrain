@@ -7,7 +7,6 @@ import java.util.LinkedList;
 import java.util.List;
 
 import com.google.common.collect.Lists;
-import com.zillabyte.motherbrain.flow.MetaTuple;
 
 public class RelationDef implements Serializable {
   
@@ -43,10 +42,6 @@ public class RelationDef implements Serializable {
     return _valueColumns;
   }
   
-  public List<ColumnDef> metaColumns() {
-    return MetaTuple.columns();
-  }
-  
   
   public String name() {
     return tableName;
@@ -66,7 +61,6 @@ public class RelationDef implements Serializable {
   public List<ColumnDef> allColumns() {
     List<ColumnDef> l = Lists.newArrayList();
     l.addAll(valueColumns());
-    l.addAll(metaColumns());
     return l;
   }
 
