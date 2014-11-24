@@ -180,7 +180,7 @@ public class Heartbeat {
       // Inform user...
       e.printStackTrace();
       _log.error("Ironic heartbeat error: " + e);
-      _op.logger().error(MotherbrainException.getRootUserMessage(e, "Internal operation error"));
+      _op.logger().logError(e);
       
       // Propagate error back to the operation... This will get rethrown on next iteration...
       _unhandledException = e;

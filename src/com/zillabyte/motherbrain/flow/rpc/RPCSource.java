@@ -77,9 +77,7 @@ public final class RPCSource extends Source {
 
       } catch(MotherbrainException e) {
 
-        // Fail this request 
-        log.error(e.getInternalMessage());
-        this.logger().error(e.getUserMessage());   
+        this.logger().logError(e);   
 
       } finally {
         
