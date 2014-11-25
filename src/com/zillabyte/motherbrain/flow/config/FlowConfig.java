@@ -18,7 +18,11 @@ public class FlowConfig extends UserConfig {
   }
   
   public String getFlowId() {
-    return get("flow_id").toString();
+    if (this.containsKey("flow_id")) {
+      return get("flow_id").toString();
+    } else {
+      return null;
+    }
   }
   
   public Integer getFlowVersion() {
