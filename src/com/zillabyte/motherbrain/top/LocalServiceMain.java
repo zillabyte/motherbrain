@@ -28,6 +28,7 @@ import com.zillabyte.motherbrain.flow.StateMachineException;
 import com.zillabyte.motherbrain.flow.config.FlowConfig;
 import com.zillabyte.motherbrain.flow.operations.OperationLogger;
 import com.zillabyte.motherbrain.flow.rpc.RPCHelper;
+import com.zillabyte.motherbrain.universe.Config;
 import com.zillabyte.motherbrain.universe.Universe;
 import com.zillabyte.motherbrain.utils.JarCompilationException;
 import com.zillabyte.motherbrain.utils.Utils;
@@ -396,6 +397,7 @@ public class LocalServiceMain {
     if(Universe.instance().config().getOrException("flow.class").equals("app")) {
       handleRegisteringApp(FlowConfig.createMock(flowName, 0, 0) );
     } else {
+      Config.setDefault("rpc.source.idle.interval", 1000L * 3);
       handleStartingRPC(flowName, FlowConfig.createMock(flowName, 0, 0));
     }
     _flowInstance.startNewCycle();

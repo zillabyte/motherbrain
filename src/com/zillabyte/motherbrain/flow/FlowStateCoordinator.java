@@ -39,7 +39,6 @@ public class FlowStateCoordinator implements Serializable {
    * @throws CoordinationException 
    */
   public FlowState maybeGetNewFlowState(final FlowInstanceSetBuilder builder, final FlowState currentState) throws StateMachineException, FlowException, InterruptedException, OperationException, CoordinationException {
-        
     /*
      * Do we have any errors in our operations?
      */
