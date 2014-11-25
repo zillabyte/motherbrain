@@ -285,14 +285,9 @@ public class FlowInstance implements Serializable {
         final Exception e = p.getValue0();
         final Long d = p.getValue1();
         final HashMap<String, Object> errorMap = new HashMap<>();
-        final MotherbrainException me = Utils.getRootException(e, MotherbrainException.class);
-        errorMap.put("internal_message", e.toString());
+        errorMap.put("internal_message", e.getMessage());
+        errorMap.put("user_message", e.getMessage());
         errorMap.put("stack_trace", ExceptionUtils.getFullStackTrace(e));
-        if (me != null) {
-          errorMap.put("internal_message", me.getInternalMessage());
-          errorMap.put("user_message", me.getUserMessage());
-          errorMap.put("date", dateFormat.format(Utils.valueOf(me.getDate())));
-        }
         errorMap.put("processed_date", dateFormat.format(d));
         recentErrors.add(errorMap);
       }
