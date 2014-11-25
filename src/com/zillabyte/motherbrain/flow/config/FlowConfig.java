@@ -21,7 +21,7 @@ public class FlowConfig extends UserConfig {
     if (this.containsKey("flow_id")) {
       return get("flow_id").toString();
     } else {
-      throw new NullPointerException("flow_id is missing!");
+      return null;
     }
   }
   
