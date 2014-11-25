@@ -2,24 +2,23 @@ package com.zillabyte.motherbrain.flow.operations.builtin;
 
 import java.util.List;
 
+import net.sf.json.JSONObject;
+
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
+import com.zillabyte.motherbrain.flow.Fields;
 import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.operations.AggregationOperation;
 import com.zillabyte.motherbrain.flow.operations.OperationException;
 import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangException;
+import com.zillabyte.motherbrain.flow.operations.multilang.operations.MultilangHandler;
 import com.zillabyte.motherbrain.top.MotherbrainException;
 import com.zillabyte.motherbrain.universe.Config;
 
 
 /***
- * A clumper just 'clumps' together a handful of tuples and sends them down to the underlying
- * aggregator. Examples (1):  say we want to crawl 100 domains at a time.. how do we get 100 domains
- * into the operation?  Use case (2): say we build a custom s3 sink, but we want to sink 10000 tuples
- * at a time. 
- * @author jake
- *
+ * 
  */
 public abstract class Clumper extends AggregationOperation {
 
@@ -43,6 +42,7 @@ public abstract class Clumper extends AggregationOperation {
     this(name);
     _clumpMaxCount = (long) clumpCount;
   }
+  
 
   
   /**

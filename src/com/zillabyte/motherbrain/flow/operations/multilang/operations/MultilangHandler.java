@@ -61,6 +61,15 @@ public class MultilangHandler implements Serializable {
   public static String getName(JSONObject nodeSettings) {
     return nodeSettings.getString("name");
   }
+  
+  public static String getConfig(JSONObject nodeSettings, String key, String def) {
+    if (nodeSettings.has("config")) {
+      if (nodeSettings.getJSONObject("config").has(key)) {
+        return nodeSettings.getJSONObject("config").getString(key);
+      }
+    }
+    return def;
+  }
 
   public synchronized void prepare() throws MultiLangException {
     try {

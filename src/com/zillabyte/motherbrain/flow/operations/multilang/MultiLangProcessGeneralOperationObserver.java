@@ -2,6 +2,8 @@ package com.zillabyte.motherbrain.flow.operations.multilang;
 
 
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -11,6 +13,7 @@ import net.sf.json.JSONObject;
 
 import org.apache.log4j.Logger;
 
+import com.google.monitoring.runtime.instrumentation.common.com.google.common.collect.Lists;
 import com.zillabyte.motherbrain.flow.MapTuple;
 import com.zillabyte.motherbrain.flow.operations.Operation;
 import com.zillabyte.motherbrain.flow.operations.OperationException;
@@ -143,32 +146,32 @@ public class MultiLangProcessGeneralOperationObserver implements MultiLangMessag
    */
   public void sendTupleMessage(MapTuple t) throws MultiLangProcessException, InterruptedException {
 
-    JSONObject meta = new JSONObject();
-    meta.put("confidence", t.meta().getConfidence());
-    meta.put("source", t.meta().getSource());
-    meta.put("date", Long.valueOf(t.meta().getSince().getTime()));
-    
     // CLI: Make sure this is synced
     JSONObject obj = new JSONObject();
-    obj.put("meta", meta);
     obj.put("tuple", t.getValuesJSON());
-    
-    Map<String, String> aliases = t.getAliases();
-    if (aliases.size() > 0) {
-      JSONArray ary = new JSONArray();
-      for(Entry<String, String> e: aliases.entrySet()) {
-        JSONObject o = new JSONObject();
-        o.put("concrete_name", e.getValue());
-        o.put("alias", e.getKey());
-        ary.add(o);
-      }
-      obj.put("column_aliases", ary);
-    }
 
     // _log.info("sending tuple message: " + obj.toString());
     _proc.writeMessageWithEnd(obj.toString());
 
   }
+  
+  
+  public void sendTuplesMessage(Collection<MapTuple> col) throws MultiLangProcessException, InterruptedException {
+
+    JSONObject obj = new JSONObject();
+    List<JSONObject> list = Lists.newLinkedList();
+
+    for(MapTuple t : col) {
+      list.add(t.getValuesJSON());
+    }
+    obj.put("tuples", list);
+    
+    // _log.info("sending tuple message: " + obj.toString());
+    _proc.writeMessageWithEnd(obj.toString());
+
+  }
+  
+  
   
   
   
@@ -184,15 +187,9 @@ public class MultiLangProcessGeneralOperationObserver implements MultiLangMessag
    */
   public void sendBeginGroup(MapTuple t) throws MultiLangProcessException, InterruptedException {
     
-    JSONObject meta = new JSONObject();
-    meta.put("confidence", t.meta().getConfidence());
-    meta.put("source", t.meta().getSource());
-    meta.put("date", Long.valueOf(t.meta().getSince().getTime()));
-    
     // CLI
     JSONObject obj = new JSONObject();
     obj.put("command", "begin_group");
-    obj.put("meta", meta);
     obj.put("tuple", t.getValuesJSON());
     
     // _log.info("sending group begin message: " + obj.toString());
@@ -212,15 +209,9 @@ public class MultiLangProcessGeneralOperationObserver implements MultiLangMessag
    */
   public void sendAggregate(MapTuple t, JSONArray aliases) throws MultiLangProcessException, InterruptedException {
     
-    JSONObject meta = new JSONObject();
-    meta.put("confidence", t.meta().getConfidence());
-    meta.put("source", t.meta().getSource());
-    meta.put("date", Long.valueOf(t.meta().getSince().getTime()));
-    
     // CLI
     JSONObject obj = new JSONObject();
     obj.put("command", "aggregate");
-    obj.put("meta", meta);
     obj.put("tuple", t.getValuesJSON());
     
     if (aliases != null) {
