@@ -728,32 +728,25 @@ public abstract class Operation implements Serializable {
 
 
   public void handleFatalError(Throwable e) throws OperationException, FakeLocalException {
-    if(e instanceof MotherbrainException) {
-      _operationLogger.writeLog("FATAL ERROR:", OperationLogger.LogPriority.ERROR);
-      _operationLogger.logError((Exception) e);
-    }
+    _operationLogger.writeLog("FATAL ERROR:", OperationLogger.LogPriority.ERROR);
+    _operationLogger.logError((Exception) e);
     this._errorStrategy.handleFatalError(e);
   }
 
 
   public void handleLoopError(Throwable e) throws OperationException, FakeLocalException {
-    if(e instanceof MotherbrainException) {
-      _operationLogger.writeLog("LOOP ERROR/WARNING:", OperationLogger.LogPriority.ERROR);
-      _operationLogger.logError((Exception) e);
-    }
+    _operationLogger.writeLog("LOOP ERROR/WARNING:", OperationLogger.LogPriority.ERROR);
+    _operationLogger.logError((Exception) e);
     this._errorStrategy.handleLoopError(e);
   }
 
-  public void reportError(final Throwable e) throws InterruptedException,
-      CoordinationException {
+  public void reportError(final Throwable e) throws InterruptedException, CoordinationException {
     this.sendMessageToFlow_ThreadUnsafe("errors", e);
   }
 
-  public abstract void transitionToState(String s, boolean transactional)
-      throws StateMachineException, TimeoutException, CoordinationException;
+  public abstract void transitionToState(String s, boolean transactional) throws StateMachineException, TimeoutException, CoordinationException;
 
-  public void transitionToState(String s) throws StateMachineException,
-      CoordinationException, TimeoutException {
+  public void transitionToState(String s) throws StateMachineException, CoordinationException, TimeoutException {
     transitionToState(s, false);
   }
 
