@@ -136,6 +136,15 @@ public class SinkToBuffer extends Sink {
   }
   
   @Override
+  public int getMaxParallelism() {
+    if(!Universe.instance().env().isTestOrProd()) {
+      return 1; // Local buffer sinks will overwrite each other otherwise
+    } else {
+      return super.getMaxParallelism();
+    }
+  }
+  
+  @Override
   public void onFinalizeDeclare() throws OperationException, InterruptedException { 
 
     //RelationDefFactory relationFactory = Universe.instance().relationFactory();

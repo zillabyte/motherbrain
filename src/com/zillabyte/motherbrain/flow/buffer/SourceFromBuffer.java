@@ -112,8 +112,7 @@ public class SourceFromBuffer extends Source {
     // We'll let the consumer decide if it is done emitting.
     if(_consumer.isEmitComplete()){
       return false; // False signifies that the source is done, and flow can move into WFNC
-    }
-    else {
+    } else {
       return true; 
     }
   }
@@ -166,7 +165,11 @@ public class SourceFromBuffer extends Source {
 
   @Override
   public int getMaxParallelism() {
-    return MAX_PARALLELISM;
+    if(Universe.instance().env().isTestOrProd()) {
+      return MAX_PARALLELISM;
+    } else {
+      return 1; // Local buffer will re-emit everything parallelism-number of times otherwise
+    }
   }
 
   @Override
