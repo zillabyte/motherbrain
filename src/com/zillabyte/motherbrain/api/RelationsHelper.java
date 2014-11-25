@@ -27,8 +27,8 @@ public class RelationsHelper implements Serializable {
     this._base = api;
   }
 
-  public Query concretifyQuery(String relationName, String authToken) throws APIException, InterruptedException {
-    JSONObject obj = _base.getRelationConcretified(relationName, authToken);
+  public Query concretifyQuery(String relationName, Integer version, String authToken) throws APIException, InterruptedException {
+    JSONObject obj = _base.getRelationConcretified(relationName, version, authToken);
     
     Query result = null;
     if (obj.has("s3_only")) {

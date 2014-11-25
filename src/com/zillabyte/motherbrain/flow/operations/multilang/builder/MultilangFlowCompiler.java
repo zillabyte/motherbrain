@@ -501,9 +501,10 @@ public class MultilangFlowCompiler {
         if (node.containsKey("relation") || node.containsKey("matches")) {
           // SourceFromRelation has 'relation' or 'matches' 
           String query = node.containsKey("relation") ? node.getJSONObject("relation").getString("query") : node.getString("matches");
+          Integer version = node.getJSONObject("config").optInt("version", -1);
 
           // The one true source.
-          return new SourceFromBuffer(node.getString("name"), query, flowId, this._flowConfig.getAuthToken());
+          return new SourceFromBuffer(node.getString("name"), query, version, flowId, this._flowConfig.getAuthToken());
           
         } else {        
           // Custom sources don't have a query.. 

@@ -27,7 +27,7 @@ public class LocalAPIService implements APIService {
   }
 
   @Override
-  public JSONObject getRelationConcretified(String sql, String authToken) throws APIException {
+  public JSONObject getRelationConcretified(String sql, Integer version, String authToken) throws APIException {
     JSONObject params = new JSONObject();
     params.put("relation", sql);
     return RestAPIHelper.post("/relation_backend/concretify_anonymous", params.toString(), authToken);
