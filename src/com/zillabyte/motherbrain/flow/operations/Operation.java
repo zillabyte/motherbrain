@@ -900,7 +900,7 @@ public abstract class Operation implements Serializable {
   }
 
   public int getTargetParallelism() {
-    return _targetParallelism;
+    return Math.min(_targetParallelism, this.getMaxParallelism());
   }
 
   public Operation setTargetParallelism(int v) {
