@@ -60,7 +60,7 @@ public class MultilangFlowCompiler {
 
   public final Long CLI_INFO_TIMEOUT = Config.getOrDefault("builder.cli.info.timeout", 1000L * 15);
   public final Long CLI_PREP_TIMEOUT = Config.getOrDefault("builder.cli.prep.timeout", 1000L * 60 * 5);
-  public final String MINIMUM_REQUIRED_VERSION = Config.getOrDefault("builder.cli.min.version", "0.9.38");
+  public final String MINIMUM_REQUIRED_VERSION = Config.getOrDefault("builder.cli.min.version", "0.9.37");
   public final static int MAX_SLOTS_PER_FLOW = Config.getOrDefault("builder.max.slots.per.flow", 30);
   private final static Logger _log = Logger.getLogger(MultilangFlowCompiler.class);
 
