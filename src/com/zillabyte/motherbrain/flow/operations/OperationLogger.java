@@ -1,4 +1,5 @@
 package com.zillabyte.motherbrain.flow.operations;
+import com.google.common.util.concurrent.RateLimiter;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,15 +19,19 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.Priority;
 
+import com.google.monitoring.runtime.instrumentation.common.com.google.common.base.Joiner;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.filter.HTTPBasicAuthFilter;
 import com.zillabyte.motherbrain.api.APIException;
+import com.zillabyte.motherbrain.api.RestAPIHelper;
 import com.zillabyte.motherbrain.universe.Universe;
 import com.zillabyte.motherbrain.utils.Utils;
 
 public abstract class OperationLogger implements Serializable {
+
+  private static final RateLimiter rateLimiter = RateLimiter.create(1.0); // rate is "10 permits per second"
 
   private static final long serialVersionUID = -4995010296782665869L;      
   private static final SimpleDateFormat rfc3339 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
@@ -58,14 +63,65 @@ public abstract class OperationLogger implements Serializable {
     }
   }
   
+  
+  
+  
+  public void sendToHipchat(String message, Exception e) {
+	 
+//	 if (rateLimiter.tryAcquire()) {
+	    	 	 
+		 String stacktrace = new String();
+		 stacktrace = Joiner.on("\n").join(e.getStackTrace());
+		  
+		 JSONObject params = new JSONObject();
+		 params.put("message", message);
+		 params.put("stack_trace", stacktrace);
+	
+		 // send to API
+		 try {
+		   RestAPIHelper.post("/gmb_errors_to_hipchat", params.toString(), "AjQl83zAuawmphDzoiH9Lps4RYRM4bl7RqjddZLnOoWWR-qauN5_RGdK");
+		 } catch (APIException e1) {
+		   e1.printStackTrace();
+		 }
+	 
+//	 }
+
+  }
+  
+
+  
+  public void sendToHipchat(String flowId, String procId, String message) {
+	 
+ 	
+		 JSONObject params = new JSONObject();
+		 params.put("flow_id", flowId);
+		 params.put("proc_id", procId);
+		 params.put("message", message);
+
+		 // send to API
+		 try {
+		   RestAPIHelper.post("/gmb_errors_to_hipchat", params.toString(), "AjQl83zAuawmphDzoiH9Lps4RYRM4bl7RqjddZLnOoWWR-qauN5_RGdK");
+		 } catch (APIException e1) {
+		   e1.printStackTrace();
+		 }
+
+  }
+  
   public void logError(Exception e) {
     String message = e.getMessage();
+        
     for(String s : message.split("\\\\n")) { // Apparently we need that many slashes to escape \n
       writeLog("\t"+s, LogPriority.ERROR);
+      writeLog("within message split", LogPriority.ERROR);
     }
+
     for(StackTraceElement s : e.getStackTrace()) {
       writeLog(s.toString(), LogPriority.ERROR);
     }
+    
+    // to send to hipchat
+    sendToHipchat(message, e);
+
   }
 
   abstract void writeLogInternal(String message, LogPriority priority) throws InterruptedException, OperationLoggerException;
@@ -116,7 +172,7 @@ public abstract class OperationLogger implements Serializable {
     @SuppressWarnings("deprecation")
     @Override
     public void writeLog(String message, LogPriority priority) 
-    {
+    {	
       log.log(OperationLogger.Base.class.getName(), Priority.INFO, "[f" + _flowId + "][" + _procId.toString() + "][" + priority + "] " + message, null);
       try {
         writeLogInternal(message, priority);
@@ -305,6 +361,9 @@ public abstract class OperationLogger implements Serializable {
             toRFC3339(new Date()) + " flow_" + _flowId + "[" +
             _procId + "] - [" + priority + "] " +
             message);
+		 if (rateLimiter.tryAcquire()) {
+        sendToHipchat(_flowId, _procId, message);
+		 }
       } catch(IOException e) {
         throw new OperationLoggerException(e);
       }
