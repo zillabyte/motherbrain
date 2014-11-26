@@ -30,6 +30,7 @@ public class LocalAPIService implements APIService {
   public JSONObject getRelationConcretified(String sql, Integer version, String authToken) throws APIException {
     JSONObject params = new JSONObject();
     params.put("relation", sql);
+    params.put("version", version);
     return RestAPIHelper.post("/relation_backend/concretify_anonymous", params.toString(), authToken);
   }
 
