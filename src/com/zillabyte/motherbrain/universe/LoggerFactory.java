@@ -30,29 +30,7 @@ public abstract class LoggerFactory implements Serializable {
   public OperationLogger logger(String flowId, String procId) {
     return logger(flowId, procId, "_no_authtoken_");
   }
-   
-  
-  public static final class Logplex extends LoggerFactory {
-    /**
-     * 
-     */
-    private static final long serialVersionUID = -3258133749862822037L;
-    final String _server;
-    final String _port;
-    
-    public Logplex(final String server, final String port) {
-      _server = server;
-      _port = port;
-    }
-    
-    @Override
-    public OperationLogger logger(final String flowId, String procId, String authToken) {
-      final OperationLogger.Logplex newLogger = new OperationLogger.Logplex(_server, _port, flowId, procId, authToken);
-      return newLogger;
-    }
-  }
-  
-  
+
   
   public static final class Local extends LoggerFactory {
     /**
