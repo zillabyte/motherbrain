@@ -162,9 +162,13 @@ public class MultiLangProcess {
           public Socket call() throws MultiLangProcessException {
             _benchmark.begin("multilang.process.socket.init");
             try {
+              System.err.println("Set Performance");
               _serverSocket.setPerformancePreferences(0, 2, 1);
+              System.err.println("Set Value");
               socketRunning.setValue(true);
+              System.err.println("Accept");
               Socket socket = _serverSocket.accept();
+              System.err.println("Return");
               return socket;
             } catch(Exception e) {
               _log.error("error in socket connection: \n" + ExceptionUtils.getFullStackTrace(e));
