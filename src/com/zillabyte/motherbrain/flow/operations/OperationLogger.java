@@ -68,7 +68,7 @@ public abstract class OperationLogger implements Serializable {
     for(StackTraceElement s : e.getStackTrace()) {
       writeLog(s.toString(), LogPriority.ERROR);
     }
-    if(e.getCause() != null) {
+    if(e.getCause().getCause() != null) { // The last 2 getCause's seem to return the same stacktrace...
       writeLog("Caused by:", LogPriority.ERROR);
       logError((Exception) e.getCause());
     }
