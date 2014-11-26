@@ -49,7 +49,6 @@ import com.zillabyte.motherbrain.flow.operations.decorators.EmitDecorator;
 import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangException;
 import com.zillabyte.motherbrain.metrics.Metrics;
 import com.zillabyte.motherbrain.relational.DefaultStreamException;
-import com.zillabyte.motherbrain.top.MotherbrainException;
 import com.zillabyte.motherbrain.universe.Config;
 import com.zillabyte.motherbrain.universe.S3Exception;
 import com.zillabyte.motherbrain.universe.Universe;

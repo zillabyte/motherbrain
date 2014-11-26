@@ -2,12 +2,10 @@ package com.zillabyte.motherbrain.flow.buffer.mock;
 
 import java.io.Serializable;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import net.sf.json.JSONObject;
 
-import com.google.common.collect.Lists;
 import com.zillabyte.motherbrain.api.APIException;
 import com.zillabyte.motherbrain.api.RestAPIHelper;
 import com.zillabyte.motherbrain.flow.MapTuple;
