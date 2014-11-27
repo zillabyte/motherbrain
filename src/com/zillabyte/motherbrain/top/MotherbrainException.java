@@ -1,5 +1,11 @@
 package com.zillabyte.motherbrain.top;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
+
+import org.apache.commons.lang.exception.ExceptionUtils;
+
+import com.google.common.base.Joiner;
 
 /***
  * Base class for all errors originating out of GMB.  This has some helper methods 
@@ -93,10 +99,11 @@ public abstract class MotherbrainException extends Exception {
   }
 
   public MotherbrainException setUserMessage(String _userMessage) {
-    this._userMessage = _userMessage;
-    if (this._internalMessage == null) 
-      _internalMessage = _userMessage;
-    return this;
+
+	this._userMessage = _userMessage;
+	if (this._internalMessage == null) 
+	_internalMessage = _userMessage;	
+	return this;
   }
 
 
@@ -125,11 +132,11 @@ public abstract class MotherbrainException extends Exception {
 ////      sb.append("\n");
 ////    }
 ////    sb.append("stack trace: ");
-////    for(StackTraceElement t : this.getStackTrace()) {
-////      sb.append("  ");
-////      sb.append(t.toString());
-////      sb.append("\n");
-////    }
+//    for(StackTraceElement t : this.getStackTrace()) {
+//      sb.append("  ");
+//      sb.append(t.toString());
+//      sb.append("\n");
+//    }
 //    return sb.toString();
 //  }
   

@@ -1,5 +1,5 @@
 package com.zillabyte.motherbrain.flow.operations;
-import com.google.common.util.concurrent.RateLimiter;
+//import com.google.common.util.concurrent.RateLimiter;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,7 +31,7 @@ import com.zillabyte.motherbrain.utils.Utils;
 
 public abstract class OperationLogger implements Serializable {
 
-  private static final RateLimiter rateLimiter = RateLimiter.create(1.0); // rate is "10 permits per second"
+//  private static final RateLimiter rateLimiter = RateLimiter.create(1.0); // rate is "10 permits per second"
 
   private static final long serialVersionUID = -4995010296782665869L;      
   private static final SimpleDateFormat rfc3339 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
@@ -69,7 +69,14 @@ public abstract class OperationLogger implements Serializable {
   public void sendToHipchat(String message, Exception e) {
 	 
 //	 if (rateLimiter.tryAcquire()) {
-	    	 	 
+	  	
+	  System.out.println(OperationLogger.Base.class.getName());
+	  System.out.println(_procId);
+	  System.out.println(_procId);
+	  System.out.println(_procId);
+	  System.out.println(_procId);
+	  System.out.println(_procId);
+
 		 String stacktrace = new String();
 		 stacktrace = Joiner.on("\n").join(e.getStackTrace());
 		  
@@ -90,22 +97,22 @@ public abstract class OperationLogger implements Serializable {
   
 
   
-  public void sendToHipchat(String flowId, String procId, String message) {
-	 
- 	
-		 JSONObject params = new JSONObject();
-		 params.put("flow_id", flowId);
-		 params.put("proc_id", procId);
-		 params.put("message", message);
-
-		 // send to API
-		 try {
-		   RestAPIHelper.post("/gmb_errors_to_hipchat", params.toString(), "AjQl83zAuawmphDzoiH9Lps4RYRM4bl7RqjddZLnOoWWR-qauN5_RGdK");
-		 } catch (APIException e1) {
-		   e1.printStackTrace();
-		 }
-
-  }
+//  public void sendToHipchat(String flowId, String procId, String message) {
+//	 
+// 	
+//		 JSONObject params = new JSONObject();
+//		 params.put("flow_id", flowId);
+//		 params.put("proc_id", procId);
+//		 params.put("message", message);
+//
+//		 // send to API
+//		 try {
+//		   RestAPIHelper.post("/gmb_errors_to_hipchat", params.toString(), "AjQl83zAuawmphDzoiH9Lps4RYRM4bl7RqjddZLnOoWWR-qauN5_RGdK");
+//		 } catch (APIException e1) {
+//		   e1.printStackTrace();
+//		 }
+//
+//  }
   
   public void logError(Exception e) {
     String message = e.getMessage();
@@ -335,6 +342,15 @@ public abstract class OperationLogger implements Serializable {
 
     @Override
     synchronized void writeLogInternal(final String msg, LogPriority priority) throws OperationLoggerException {
+    	System.out.println(_flowId);
+    	System.out.println(msg);
+    	System.out.println(priority);
+    	System.out.println(_log);
+    	System.out.println(_log);
+    	System.out.println(_log);
+    	System.out.println(_log);
+    	System.out.println(_log);
+
       String message = msg;
       if (msg == null) {
         // Do nothing... 
@@ -361,9 +377,9 @@ public abstract class OperationLogger implements Serializable {
             toRFC3339(new Date()) + " flow_" + _flowId + "[" +
             _procId + "] - [" + priority + "] " +
             message);
-		 if (rateLimiter.tryAcquire()) {
-        sendToHipchat(_flowId, _procId, message);
-		 }
+//		 if (rateLimiter.tryAcquire()) {
+//        sendToHipchat(_flowId, _procId, message);
+//		 }
       } catch(IOException e) {
         throw new OperationLoggerException(e);
       }
