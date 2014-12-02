@@ -16,13 +16,10 @@ import com.zillabyte.motherbrain.flow.buffer.mock.LocalBufferProducer;
 import com.zillabyte.motherbrain.flow.config.FlowConfig;
 import com.zillabyte.motherbrain.flow.operations.Operation;
 import com.zillabyte.motherbrain.flow.operations.OperationException;
-import com.zillabyte.motherbrain.flow.operations.OperationLogger;
 import com.zillabyte.motherbrain.flow.operations.Sink;
 import com.zillabyte.motherbrain.relational.ColumnDef;
 import com.zillabyte.motherbrain.relational.RelationDef;
-import com.zillabyte.motherbrain.top.MotherbrainException;
 import com.zillabyte.motherbrain.universe.Universe;
-import com.zillabyte.motherbrain.utils.MeteredLog;
 import com.zillabyte.motherbrain.utils.Utils;
 
 public class SinkToBuffer extends Sink {
@@ -105,7 +102,7 @@ public class SinkToBuffer extends Sink {
   }
 
   @Override
-  protected void process(MapTuple t) throws MotherbrainException, InterruptedException {
+  protected void process(MapTuple t) throws OperationException, InterruptedException {
     if(_producer == null)
       initProducer();
     // Sanity check:
@@ -126,8 +123,7 @@ public class SinkToBuffer extends Sink {
         if(expectField) break;
       }
       if(!expectField) {
-        _operationLogger.writeLog("Unexpected field '"+field+"' in tuple '"+t.toString()+"'. Data will not be sunk.", OperationLogger.LogPriority.ERROR);
-        return;
+        throw new OperationException(this, "Unexpected field '"+field+"' in tuple '"+t.toString()+"'. Data will not be sunk.");
       }
     }
     
@@ -137,6 +133,15 @@ public class SinkToBuffer extends Sink {
 
   public String getTopicName(){
     return _topicName;
+  }
+  
+  @Override
+  public int getMaxParallelism() {
+    if(!Universe.instance().env().isTestOrProd()) {
+      return 1; // Local buffer sinks will overwrite each other otherwise
+    } else {
+      return super.getMaxParallelism();
+    }
   }
   
   @Override

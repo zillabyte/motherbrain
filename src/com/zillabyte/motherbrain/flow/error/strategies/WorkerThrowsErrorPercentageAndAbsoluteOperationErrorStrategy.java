@@ -11,7 +11,6 @@ import com.zillabyte.motherbrain.coordination.CoordinationException;
 import com.zillabyte.motherbrain.flow.StateMachineException;
 import com.zillabyte.motherbrain.flow.operations.Operation;
 import com.zillabyte.motherbrain.flow.operations.OperationException;
-import com.zillabyte.motherbrain.top.MotherbrainException;
 import com.zillabyte.motherbrain.universe.Config;
 import com.zillabyte.motherbrain.utils.Utils;
 
@@ -76,7 +75,6 @@ public class WorkerThrowsErrorPercentageAndAbsoluteOperationErrorStrategy implem
     
     // Init 
     _log.error("fatalError: " + error + " [stacktrace]: " + ExceptionUtils.getFullStackTrace(error));
-    _op.logger().error( MotherbrainException.getRootUserMessage(error, "Fatal internal cluster error") );
     _fatalError = error;
     
     try {
@@ -116,9 +114,6 @@ public class WorkerThrowsErrorPercentageAndAbsoluteOperationErrorStrategy implem
     if (error instanceof InterruptedException) {
       Throwables.propagate(error);
     }
-    
-    // Log to the user... 
-    _op.logger().error( MotherbrainException.getRootUserMessage(error, "Internal cluster error") );
 
     // Have we seen enough errors?
     long  loopCalls = _op.getLoopCalls();

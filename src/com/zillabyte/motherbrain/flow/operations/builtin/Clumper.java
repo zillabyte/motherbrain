@@ -14,12 +14,7 @@ import com.zillabyte.motherbrain.universe.Config;
 
 
 /***
- * A clumper just 'clumps' together a handful of tuples and sends them down to the underlying
- * aggregator. Examples (1):  say we want to crawl 100 domains at a time.. how do we get 100 domains
- * into the operation?  Use case (2): say we build a custom s3 sink, but we want to sink 10000 tuples
- * at a time. 
- * @author jake
- *
+ * 
  */
 public abstract class Clumper extends AggregationOperation {
 
@@ -43,6 +38,7 @@ public abstract class Clumper extends AggregationOperation {
     this(name);
     _clumpMaxCount = (long) clumpCount;
   }
+  
 
   
   /**

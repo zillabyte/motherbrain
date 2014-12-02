@@ -8,7 +8,6 @@ import java.util.concurrent.ScheduledFuture;
 import com.zillabyte.motherbrain.flow.error.strategies.FakeLocalException;
 import com.zillabyte.motherbrain.flow.operations.Operation;
 import com.zillabyte.motherbrain.flow.operations.OperationException;
-import com.zillabyte.motherbrain.top.MotherbrainException;
 import com.zillabyte.motherbrain.universe.Config;
 import com.zillabyte.motherbrain.utils.Log4jWrapper;
 import com.zillabyte.motherbrain.utils.MeteredLog;
@@ -180,7 +179,7 @@ public class Heartbeat {
       // Inform user...
       e.printStackTrace();
       _log.error("Ironic heartbeat error: " + e);
-      _op.logger().error(MotherbrainException.getRootUserMessage(e, "Internal operation error"));
+      _op.logger().logError(e);
       
       // Propagate error back to the operation... This will get rethrown on next iteration...
       _unhandledException = e;

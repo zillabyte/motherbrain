@@ -27,8 +27,8 @@ public class RelationsHelper implements Serializable {
     this._base = api;
   }
 
-  public Query concretifyQuery(String flowId, String relationName, String authToken) throws APIException, InterruptedException {
-    JSONObject obj = _base.getRelationConcretified(flowId, relationName, authToken);
+  public Query concretifyQuery(String relationName, Integer version, String authToken) throws APIException, InterruptedException {
+    JSONObject obj = _base.getRelationConcretified(relationName, version, authToken);
     
     Query result = null;
     if (obj.has("s3_only")) {
@@ -52,9 +52,10 @@ public class RelationsHelper implements Serializable {
       jsonColumn.put(column.getAliases().get(0), column.getDataType().toString().toLowerCase());
       jsonSchema.add(jsonColumn);
     }      
-    JSONObject obj = _base.postRelationSettingsForNextVersion(relationName, jsonSchema, (String)config.get("buffer_type", "s3"), config.getAuthToken());
+    JSONObject obj = _base.postRelationSettingsForNextVersion(config.getFlowId(), relationName, jsonSchema, (String)config.get("buffer_type", "s3"), config.getAuthToken());
     return obj;
   }
+  
   public JSONObject postRelationConfigForNextVersion(FlowConfig config, String relationName, List<ColumnDef> columns) throws APIException, InterruptedException {
     return postRelationConfigForNextVersion(config, relationName, columns.toArray(new ColumnDef[] {}));
   }

@@ -18,7 +18,6 @@ import com.zillabyte.motherbrain.flow.error.strategies.FakeLocalException;
 import com.zillabyte.motherbrain.flow.operations.Operation;
 import com.zillabyte.motherbrain.flow.operations.OperationDeadException;
 import com.zillabyte.motherbrain.flow.operations.OperationException;
-import com.zillabyte.motherbrain.flow.operations.OperationLogger;
 import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangCleaner;
 import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangException;
 import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangProcess;
@@ -61,6 +60,15 @@ public class MultilangHandler implements Serializable {
   public static String getName(JSONObject nodeSettings) {
     return nodeSettings.getString("name");
   }
+  
+  public static String getConfig(JSONObject nodeSettings, String key, String def) {
+    if (nodeSettings.has("config")) {
+      if (nodeSettings.getJSONObject("config").has(key)) {
+        return nodeSettings.getJSONObject("config").getString(key);
+      }
+    }
+    return def;
+  }
 
   public synchronized void prepare() throws MultiLangException {
     try {
@@ -79,16 +87,18 @@ public class MultilangHandler implements Serializable {
       _container.start();
 
       // Do a 'prep'. TODO: remove this, and make sure all dependencies are included in the deserialization
-      _container.buildCommand()
-          .withEnvironment(ContainerEnvironmentHelper.getCLIEnvironment(this._operation.getTopFlow().getFlowConfig()))
-          .inFlowDirectory(_operation.getContainerFlow().getId())
-          .withCLICommand("prep", "--mode", Universe.instance().env().toString())
-          .withoutSockets()
-          .withEnvironment("ZILLABYTE_PARAMS", _operation.getMergedConfig().toJSON().toString())
-          .createProcess()
-          .addLogListener(_operation.logger())
-          .start()
-          .waitForExit(1000L * 45);
+      if(Universe.instance().env().isTestOrProd()) {
+        _container.buildCommand()
+        .withEnvironment(ContainerEnvironmentHelper.getCLIEnvironment(this._operation.getTopFlow().getFlowConfig()))
+        .inFlowDirectory(_operation.getContainerFlow().getId())
+        .withCLICommand("prep", "--mode", Universe.instance().env().toString())
+        .withoutSockets()
+        .withEnvironment("ZILLABYTE_PARAMS", _operation.getMergedConfig().toJSON().toString())
+        .createProcess()
+        .addLogListener(_operation.logger())
+        .start()
+        .waitForExit(1000L * 45);
+      }
 
       // Handshake
       _process = _container.buildCommand()
@@ -117,7 +127,6 @@ public class MultilangHandler implements Serializable {
       _log.info("live run is running...");
 
     } catch (MotherbrainException | InterruptedException | TimeoutException ex) {
-      _operation.logger().writeLog("Internal error while preparing operation", OperationLogger.LogPriority.ERROR);
       throw (MultiLangException) new MultiLangException(_operation, ex).setUserMessage("An error occurred while preparing the operation.").adviseRetry();
     }
   }

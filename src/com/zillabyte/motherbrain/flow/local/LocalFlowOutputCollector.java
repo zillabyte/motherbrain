@@ -206,12 +206,6 @@ public class LocalFlowOutputCollector implements OutputCollector {
    ****************************************************************************/
   
   private MapTuple _inputTuple;
-  private Long _earliestSince = null;
-  private Double _lowestConfidence = null;
-  private String _lastSource = null;
-  
-  
-  
 
 
   private MapTuple handlePreEmit(String streamName, MapTuple t) throws OperationException {
@@ -226,27 +220,11 @@ public class LocalFlowOutputCollector implements OutputCollector {
   }
 
   
-  
-  private void resetDefaultMeta() {
-    _earliestSince = Long.valueOf(System.currentTimeMillis());
-    _lowestConfidence = Double.valueOf(1.0);
-    _lastSource = "";
-  }
 
-  
   
   @Override
   public void observeIncomingTuple(MapTuple tuple) {
-    resetDefaultMeta();
     _inputTuple = tuple;
-
-    if (tuple.meta().getConfidence().doubleValue() < _lowestConfidence.doubleValue()) {
-      _lowestConfidence = tuple.meta().getConfidence();
-    }
-    if (tuple.meta().getSince().getTime() < _earliestSince.longValue()) {
-      _earliestSince = Long.valueOf(tuple.meta().getSince().getTime());
-    }
-    _lastSource = tuple.meta().getSource();
   }
 
   

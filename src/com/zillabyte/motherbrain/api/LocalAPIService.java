@@ -27,14 +27,15 @@ public class LocalAPIService implements APIService {
   }
 
   @Override
-  public JSONObject getRelationConcretified(String flowId, String sql, String authToken) throws APIException {
+  public JSONObject getRelationConcretified(String sql, Integer version, String authToken) throws APIException {
     JSONObject params = new JSONObject();
     params.put("relation", sql);
+    params.put("version", version);
     return RestAPIHelper.post("/relation_backend/concretify_anonymous", params.toString(), authToken);
   }
 
   @Override
-  public JSONObject postRelationSettingsForNextVersion(String relationName, JSONArray jsonSchema, String bufferType, String authToken) throws APIException {
+  public JSONObject postRelationSettingsForNextVersion(String flow_id, String relationName, JSONArray jsonSchema, String bufferType, String authToken) throws APIException {
     JSONBuilder builder = new JSONStringer();
     builder.object()
       .key("buffer_settings").object()

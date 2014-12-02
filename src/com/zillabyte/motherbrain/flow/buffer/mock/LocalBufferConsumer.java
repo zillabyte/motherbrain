@@ -2,11 +2,10 @@ package com.zillabyte.motherbrain.flow.buffer.mock;
 
 import java.io.Serializable;
 import java.util.Iterator;
-import java.util.LinkedList;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import net.sf.json.JSONObject;
 
-import com.google.common.collect.Lists;
 import com.zillabyte.motherbrain.api.APIException;
 import com.zillabyte.motherbrain.api.RestAPIHelper;
 import com.zillabyte.motherbrain.flow.MapTuple;
@@ -28,13 +27,8 @@ public class LocalBufferConsumer implements BufferConsumer, Serializable {
   private static final long serialVersionUID = 4433057004414450020L;
   private SourceFromBuffer _source;
   private String _topic;
-  private LinkedList<MapTuple> _messages = Lists.newLinkedList();
+  private LinkedBlockingQueue<MapTuple> _messages = new LinkedBlockingQueue<MapTuple>();
 
-
-  private final int NUM_MESSAGES = 20;
-  private int _messageNum = 0;
-  
-  
 
   public LocalBufferConsumer(SourceFromBuffer sourceOperation) throws OperationException{
     _source = sourceOperation;  
@@ -71,28 +65,23 @@ public class LocalBufferConsumer implements BufferConsumer, Serializable {
 
   @Override
   public MapTuple getNextTuple() {
-    
-    if (_messageNum < NUM_MESSAGES){
-      return _messages.get(_messageNum++);
-    }
-    return null;
+    return _messages.poll();
   }
 
   @Override
   public boolean isEmitComplete() {
-    return _messageNum == NUM_MESSAGES;
+    return _messages.isEmpty();
   }
 
   @Override
   public JSONObject createSnapshot() {
-    JSONObject snapshot = new JSONObject();
-    snapshot.put("messageNum", _messageNum);
-    return snapshot;
+    // No need to snapshot in local mode
+    return null;
   }
 
   @Override
   public void applySnapshot(JSONObject snapshot) {
-    _messageNum = snapshot.getInt("messageNum");
+    // No need to snapshot in local mode
   }
 
 }

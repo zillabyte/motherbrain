@@ -9,7 +9,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
@@ -19,7 +18,6 @@ import org.apache.log4j.Logger;
 import org.eclipse.jdt.annotation.NonNull;
 
 import com.zillabyte.motherbrain.coordination.CoordinationException;
-import com.zillabyte.motherbrain.coordination.MessageHandler;
 import com.zillabyte.motherbrain.flow.App;
 import com.zillabyte.motherbrain.flow.Component;
 import com.zillabyte.motherbrain.flow.FlowException;
@@ -30,7 +28,7 @@ import com.zillabyte.motherbrain.flow.StateMachineException;
 import com.zillabyte.motherbrain.flow.config.FlowConfig;
 import com.zillabyte.motherbrain.flow.operations.OperationLogger;
 import com.zillabyte.motherbrain.flow.rpc.RPCHelper;
-import com.zillabyte.motherbrain.universe.ExceptionHandler;
+import com.zillabyte.motherbrain.universe.Config;
 import com.zillabyte.motherbrain.universe.Universe;
 import com.zillabyte.motherbrain.utils.JarCompilationException;
 import com.zillabyte.motherbrain.utils.Utils;
@@ -123,7 +121,7 @@ public class LocalServiceMain {
             return LOCK_ERROR_RETURN_STRING;
           }
         } catch (InterruptedException e) {
-          flowLogger.error("Interrupted!");
+          flowLogger.logError(e);
           return INTERRUPT_ERROR_RETURN_STRING;
         }
         try {
@@ -152,7 +150,6 @@ public class LocalServiceMain {
           /*
            * Wait for the operations to come online...
            */
-          flowLogger.writeLog("Waiting for operations to come online: " + flowInstance.getOperationsThatAreNotAlive(), OperationLogger.LogPriority.STARTUP);
           if (!flowInstance.waitUntilAllOperationsAlive(LocalServiceMain.OPERATION_STARTING_TIMEOUT_MS, FlowState.INITIAL, FlowState.STARTING, FlowState.STARTED, FlowState.RUNNING)) {
             if (flowInstance.inState(FlowState.INITIAL, FlowState.STARTING, FlowState.STARTED, FlowState.RUNNING) == false) {
               flowLogger.writeLog("Component in unexpected state " + flowInstance.getFlowState() + ".  Aborting...", OperationLogger.LogPriority.STARTUP);
@@ -162,8 +159,7 @@ public class LocalServiceMain {
             flowInstance.transitionToState(FlowState.ERROR);
             return "{\"status\": \"error\", \"error_message\": \"operation boot timeout\"}";
           }
-          flowLogger.writeLog("Operations online.", OperationLogger.LogPriority.STARTUP);
-          flowLogger.writeLog("Beginning individual operation initialization.", OperationLogger.LogPriority.STARTUP);
+          log.info("Beginning individual operation initialization.");
           /*
            * Wait for all the operations to report they are ready to start working...
            */
@@ -181,11 +177,8 @@ public class LocalServiceMain {
           flowLogger.writeLog("RPC deployed.", OperationLogger.LogPriority.STARTUP);
 
         } catch (InterruptedException e) {
-          flowLogger.error("Interrupted!");
+          flowLogger.logError(e);
           return INTERRUPT_ERROR_RETURN_STRING;
-        } catch(MotherbrainException ex) {
-          flowLogger.writeLog(ex.getInternalMessage(), OperationLogger.LogPriority.ERROR);
-          throw ex;
         } finally {
           /*
            * Unlock if someone else didn't grab the lock.
@@ -207,9 +200,11 @@ public class LocalServiceMain {
 
     } catch (TimeoutException e) {
       log.info("flow register timeout");
+      flowLogger.logError(e);
       return "{\"status\": \"error\", \"error_message\": \"flow register timeout\"}}";
     } catch (ExecutionException e) {
       log.info("execution exception");
+      flowLogger.logError(e);
       e.printStackTrace();
       return "{\"status\": \"error\", \"error_message\": \"execution exception\"}}";
     } finally {
@@ -242,7 +237,7 @@ public class LocalServiceMain {
             return LOCK_ERROR_RETURN_STRING;
           }
         } catch (InterruptedException e) {
-          flowLogger.error("Interrupted!");
+          flowLogger.logError(e);
           return INTERRUPT_ERROR_RETURN_STRING;
         }
         try {
@@ -269,7 +264,6 @@ public class LocalServiceMain {
           /*
            * Wait for the operations to come online...
            */
-          flowLogger.writeLog("Waiting for operations to come online: " + flowInstance.getOperationsThatAreNotAlive(), OperationLogger.LogPriority.STARTUP);
           if (!flowInstance.waitUntilAllOperationsAlive(LocalServiceMain.OPERATION_STARTING_TIMEOUT_MS, FlowState.INITIAL, FlowState.STARTING, FlowState.STARTED, FlowState.RUNNING)) {
             if (flowInstance.inState(FlowState.INITIAL, FlowState.STARTING, FlowState.STARTED, FlowState.RUNNING) == false) {
               flowLogger.writeLog("App in unexpected state " + flowInstance.getFlowState() + ".  Aborting...", OperationLogger.LogPriority.STARTUP);
@@ -279,8 +273,7 @@ public class LocalServiceMain {
             flowInstance.transitionToState(FlowState.ERROR);
             return "{\"status\": \"error\", \"error_message\": \"operation boot timeout\"}";
           }
-          flowLogger.writeLog("Operations online.", OperationLogger.LogPriority.STARTUP);
-          flowLogger.writeLog("Beginning individual operation initialization.", OperationLogger.LogPriority.STARTUP);
+          log.info("Beginning individual operation initialization.");
           /*
            * Wait for all the operations to report they are ready to start working...
            */
@@ -296,11 +289,8 @@ public class LocalServiceMain {
           // Done!
           flowLogger.writeLog("App deployed.", OperationLogger.LogPriority.STARTUP);
         } catch (InterruptedException e) {
-          flowLogger.error("Interrupted!");
+          flowLogger.logError(e);
           return INTERRUPT_ERROR_RETURN_STRING;
-        } catch(MotherbrainException ex) {
-          flowLogger.writeLog(ex.getInternalMessage(), OperationLogger.LogPriority.ERROR);
-          throw ex;
         } finally {
           /*
            * Unlock if someone else didn't grab the lock.
@@ -319,11 +309,12 @@ public class LocalServiceMain {
       return future.get(REGISTER_TIMEOUT, TimeUnit.MILLISECONDS);
     } catch (TimeoutException e) {
       log.info("flow register timeout");
+      flowLogger.logError(e);
       return "{\"status\": \"error\", \"error_message\": \"flow register timeout\"}}";
     } catch (ExecutionException e) {
       log.info("execution exception");
+      flowLogger.logError(e);
       e.printStackTrace();
-      flowLogger.error(MotherbrainException.getRootUserMessage(e, "Internal cluster error"));
       return "{\"status\": \"error\", \"error_message\": \"execution exception\"}}";
     } finally {
       executor.shutdownNow();
@@ -406,6 +397,7 @@ public class LocalServiceMain {
     if(Universe.instance().config().getOrException("flow.class").equals("app")) {
       handleRegisteringApp(FlowConfig.createMock(flowName, 0, 0) );
     } else {
+      Config.setDefault("rpc.source.idle.interval", 1000L * 3);
       handleStartingRPC(flowName, FlowConfig.createMock(flowName, 0, 0));
     }
     _flowInstance.startNewCycle();

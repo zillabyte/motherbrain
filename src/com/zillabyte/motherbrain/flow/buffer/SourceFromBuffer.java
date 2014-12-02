@@ -47,6 +47,7 @@ public class SourceFromBuffer extends Source {
   public Integer _subBatch;
   
   protected String _bufferName;
+  protected Integer _version;
   protected volatile Query _concreteQuery;
 
   /**
@@ -54,21 +55,21 @@ public class SourceFromBuffer extends Source {
    * @param operationName            The operation ID/name
    * @param bufferName    The name of the buffer(e.g. Topic in Kafka) 
    */
-  public SourceFromBuffer(String operationName, String bufferName, String flowId, String authToken) {
+  public SourceFromBuffer(String operationName, String bufferName, Integer version, String flowId, String authToken) {
 
     super(operationName);
     _bufferName = bufferName;
-    
+    _version = version;
 
     try {
-      Query query = RelationsHelper.instance().concretifyQuery(flowId, bufferName, authToken);
+      Query query = RelationsHelper.instance().concretifyQuery(bufferName, version, authToken);
       if(query instanceof BufferQuery){ 
         _query = (BufferQuery) query;
         Universe.instance().bufferService().maybeFillBuffer((BufferQuery) query);
 
       }
       else if(query instanceof AliasedQuery){
-        _operationLogger.info("Unsupported dataset.");
+        _operationLogger.error("Unsupported dataset.");
         _log.error("Relation is on redshift. We have to offload it.");
         //TODO: Migrate redshift relation to kafka.
 
@@ -112,8 +113,7 @@ public class SourceFromBuffer extends Source {
     // We'll let the consumer decide if it is done emitting.
     if(_consumer.isEmitComplete()){
       return false; // False signifies that the source is done, and flow can move into WFNC
-    }
-    else {
+    } else {
       return true; 
     }
   }
@@ -166,7 +166,11 @@ public class SourceFromBuffer extends Source {
 
   @Override
   public int getMaxParallelism() {
-    return MAX_PARALLELISM;
+    if(Universe.instance().env().isTestOrProd()) {
+      return MAX_PARALLELISM;
+    } else {
+      return 1; // Local buffer will re-emit everything parallelism-number of times otherwise
+    }
   }
 
   @Override

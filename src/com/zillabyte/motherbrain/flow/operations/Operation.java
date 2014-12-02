@@ -38,6 +38,7 @@ import com.zillabyte.motherbrain.flow.Flow;
 import com.zillabyte.motherbrain.flow.StateMachineException;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.collectors.coordinated.CoordinatedOutputCollector;
+import com.zillabyte.motherbrain.flow.config.FlowConfig;
 import com.zillabyte.motherbrain.flow.config.OperationConfig;
 import com.zillabyte.motherbrain.flow.config.UserConfig;
 import com.zillabyte.motherbrain.flow.error.strategies.FakeLocalException;
@@ -49,7 +50,6 @@ import com.zillabyte.motherbrain.flow.operations.decorators.EmitDecorator;
 import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangException;
 import com.zillabyte.motherbrain.metrics.Metrics;
 import com.zillabyte.motherbrain.relational.DefaultStreamException;
-import com.zillabyte.motherbrain.top.MotherbrainException;
 import com.zillabyte.motherbrain.universe.Config;
 import com.zillabyte.motherbrain.universe.S3Exception;
 import com.zillabyte.motherbrain.universe.Universe;
@@ -375,6 +375,7 @@ public abstract class Operation implements Serializable {
   public OperationLogger logger() {
     return _operationLogger;
   }
+  
 
   public Heartbeat getHeartbeat() {
     return _heartbeat;
@@ -526,10 +527,7 @@ public abstract class Operation implements Serializable {
 
   }
 
-  protected void notifyOfNewState(String newState, boolean transactional)
-      throws TimeoutException, CoordinationException {
-    _operationLogger.writeLog("Transitioning to state: " + newState,
-        OperationLogger.LogPriority.RUN);
+  protected void notifyOfNewState(String newState, boolean transactional) throws TimeoutException, CoordinationException {
     if (transactional) {
       sendTransactionalMessageToFlow("state", newState);
     } else {
@@ -730,30 +728,25 @@ public abstract class Operation implements Serializable {
 
 
   public void handleFatalError(Throwable e) throws OperationException, FakeLocalException {
-    if(e instanceof MotherbrainException) {
-      _operationLogger.writeLog( "FATAL ERROR: "+MotherbrainException.getRootUserMessage(e, "Internal cluster error. Please try 'zillabyte errors'."), OperationLogger.LogPriority.ERROR);
-    }
+    _operationLogger.writeLog("FATAL ERROR:", OperationLogger.LogPriority.ERROR);
+    _operationLogger.logError((Exception) e);
     this._errorStrategy.handleFatalError(e);
   }
 
 
   public void handleLoopError(Throwable e) throws OperationException, FakeLocalException {
-    if(e instanceof MotherbrainException) {
-      _operationLogger.writeLog( "LOOP ERROR (WARNING): "+MotherbrainException.getRootUserMessage(e, "Internal cluster error. Please try 'zillabyte errors'."), OperationLogger.LogPriority.ERROR);
-    }
+    _operationLogger.writeLog("LOOP ERROR/WARNING:", OperationLogger.LogPriority.ERROR);
+    _operationLogger.logError((Exception) e);
     this._errorStrategy.handleLoopError(e);
   }
 
-  public void reportError(final Throwable e) throws InterruptedException,
-      CoordinationException {
+  public void reportError(final Throwable e) throws InterruptedException, CoordinationException {
     this.sendMessageToFlow_ThreadUnsafe("errors", e);
   }
 
-  public abstract void transitionToState(String s, boolean transactional)
-      throws StateMachineException, TimeoutException, CoordinationException;
+  public abstract void transitionToState(String s, boolean transactional) throws StateMachineException, TimeoutException, CoordinationException;
 
-  public void transitionToState(String s) throws StateMachineException,
-      CoordinationException, TimeoutException {
+  public void transitionToState(String s) throws StateMachineException, CoordinationException, TimeoutException {
     transitionToState(s, false);
   }
 
@@ -907,7 +900,7 @@ public abstract class Operation implements Serializable {
   }
 
   public int getTargetParallelism() {
-    return _targetParallelism;
+    return Math.min(_targetParallelism, this.getMaxParallelism());
   }
 
   public Operation setTargetParallelism(int v) {
@@ -937,7 +930,7 @@ public abstract class Operation implements Serializable {
 
   private void applySnapshotIfExists_ThreadUnsafe() {
     // Apply a snapshot if it exists
-    _operationLogger.writeLog("checking for snapshot...", OperationLogger.LogPriority.SYSTEM);
+    _log.info("checking for snapshot...");
 
     try {
       Utils.retryUnchecked(3, new Callable<Void>() {
@@ -947,16 +940,13 @@ public abstract class Operation implements Serializable {
             
             String snapshotJSON = Universe.instance().dfsService().readFileAsString(s3SnapshotKey());
             if (snapshotJSON != null) {
-              _operationLogger.writeLog("found snapshot, applying...", OperationLogger.LogPriority.SYSTEM);
+              _operationLogger.writeLog("Found snapshot, applying...", OperationLogger.LogPriority.SYSTEM);
               JSONObject snapshot = JSONUtil.parseObj(snapshotJSON);
               applySnapshot(snapshot);
-              _operationLogger.writeLog("applied snapshot", OperationLogger.LogPriority.SYSTEM);
+              _log.info("applied snapshot");
 
-              // Delete old snapshot
-              _operationLogger.writeLog("deleting old snapshot...", OperationLogger.LogPriority.SYSTEM);
-              
+              // Delete old snapshot              
               Universe.instance().dfsService().deleteFile(s3SnapshotKey());
-              _operationLogger.writeLog("deleted snapshot", OperationLogger.LogPriority.SYSTEM);
 
             }
           } catch (IOException e) {
@@ -966,7 +956,7 @@ public abstract class Operation implements Serializable {
         }
       });
     } catch (Exception e) {
-      _operationLogger.writeLog("error applying snapshot: " + e.getMessage(), OperationLogger.LogPriority.ERROR);
+      _operationLogger.writeLog("Error applying snapshot: " + e.getMessage(), OperationLogger.LogPriority.ERROR);
     }
   }
 
@@ -1049,8 +1039,7 @@ public abstract class Operation implements Serializable {
    */
   public void handleResume() throws OperationException {
 
-    _operationLogger
-        .writeLog("resuming...", OperationLogger.LogPriority.SYSTEM);
+    _operationLogger.writeLog("Resuming...", OperationLogger.LogPriority.SYSTEM);
 
     // apply snapshot
     applySnapshotIfExists_ThreadUnsafe();
@@ -1174,7 +1163,8 @@ public abstract class Operation implements Serializable {
 
 
             // Prepare the logger... Tell the state store where the logger islocated..
-            _operationLogger = Universe.instance().loggerFactory().logger(topFlowId(), instanceName(), getTopFlow().getFlowConfig().getAuthToken());
+            FlowConfig flowConfig = getTopFlow().getFlowConfig();
+            _operationLogger = Universe.instance().loggerFactory().logger(topFlowId(), instanceName(), flowConfig.getAuthToken(), flowConfig.getEmail());
 
             // Start the heartbeat
             _heartbeat = Heartbeat.create(Operation.this, _executor);
@@ -1211,8 +1201,6 @@ public abstract class Operation implements Serializable {
 
                 Benchmark.markBegin("operation.prepare.pre_prepare");
                 _log.info("beginning pre-prepare stage...");
-                _operationLogger.writeLog("Beginning prepare",
-                    OperationLogger.LogPriority.STARTUP);
                 prePrepare();
 
                 _log.info("done with pre-prepare");
@@ -1242,10 +1230,6 @@ public abstract class Operation implements Serializable {
         });
 
       } catch (ExecutionException e) {
-        logger().error("Critical error in prepare stage for " + instanceName() + ".");
-        if (!Universe.instance().env().isProd()) {
-          logger().error("Internal error: " + ExceptionUtils.getStackTrace(e));
-        }
         handleFatalError(e);
 
       } catch (TimeoutException e) {
@@ -1319,7 +1303,7 @@ public abstract class Operation implements Serializable {
    */
   protected void handleFlowCommand(String command) throws Exception {
     if (command.equalsIgnoreCase("die")) {
-      _operationLogger.writeLog("killing ourself...(" + this.instanceName() + ")", OperationLogger.LogPriority.RUN);
+      _operationLogger.writeLog("Received command to shut down.", OperationLogger.LogPriority.RUN);
       handleCleanup();
 
     } else if (command.equalsIgnoreCase("report")) {
@@ -1353,7 +1337,7 @@ public abstract class Operation implements Serializable {
     if (_namespacePrefix == null || _namespacePrefix.equals("")) {
       _namespacePrefix = prefix;
     } else {
-      _namespacePrefix = _namespacePrefix + "." + prefix;
+      _namespacePrefix = prefix + "." + _namespacePrefix;
     }
   }
 

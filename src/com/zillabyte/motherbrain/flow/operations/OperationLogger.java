@@ -3,13 +3,10 @@ package com.zillabyte.motherbrain.flow.operations;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
-import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
 import java.util.UUID;
-
-import net.sf.json.JSONObject;
 
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.Layout;
@@ -18,11 +15,6 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.Priority;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.api.client.filter.HTTPBasicAuthFilter;
-import com.zillabyte.motherbrain.api.APIException;
 import com.zillabyte.motherbrain.universe.Universe;
 import com.zillabyte.motherbrain.utils.Utils;
 
@@ -46,7 +38,7 @@ public abstract class OperationLogger implements Serializable {
     return _procId;
   }
   
-  static final String toRFC3339(Date d) {
+  protected static final String toRFC3339(Date d) {
     return rfc3339.format(d).replaceAll("(\\d\\d)(\\d\\d)$", "$1:$2");
   }
 
@@ -58,8 +50,23 @@ public abstract class OperationLogger implements Serializable {
     }
   }
   
+  public void logError(Exception e) {
+    String message = e.getMessage();
+    if(message != null) {
+      for(String s : message.split("\\\\n")) { // Apparently we need that many slashes to escape \n
+        writeLog(s, LogPriority.ERROR);
+      }
+    }
+    for(StackTraceElement s : e.getStackTrace()) {
+      writeLog(s.toString(), LogPriority.ERROR);
+    }
+    if(e.getCause() != null) {
+      writeLog("Caused by:", LogPriority.ERROR);
+      logError((Exception) e.getCause());
+    }
+  }
 
-  abstract void writeLogInternal(String message, LogPriority priority) throws InterruptedException, OperationLoggerException;
+  protected abstract void writeLogInternal(String message, LogPriority priority) throws InterruptedException, OperationLoggerException;
 
   public abstract String absoluteFilename();
 
@@ -133,7 +140,7 @@ public abstract class OperationLogger implements Serializable {
     private static final long serialVersionUID = 9221643914582167040L;
 
     @Override
-    void writeLogInternal(String message, LogPriority priority) {
+    protected void writeLogInternal(String message, LogPriority priority) {
       // System.err.println("noop:" + message);
     }
 
@@ -144,101 +151,6 @@ public abstract class OperationLogger implements Serializable {
 
   }
 
-  public static class Logplex extends Base {
-
-    /**
-     * Serialization ID
-     */
-    private static final long serialVersionUID = 6964988076624021269L;
-
-    static final long WAIT_AFTER_500_MS = 3000;
-
-    static final int MAX_RETRIES = 5;
-    static final int MAX_LENGTH = 80 * 5; // Lines in display
-
-    private String _server;
-    private String _port;
-    private String _username = "2B24E987784D3096DACFD45BB61D6298";
-    private String _password = "367CAC1C2709164BA7E621F6D021401D85FEB0B14F56CB234041AA2C0F536D01";
-    private String _token = null;
-    private String _channel = null;
-    private String _drain = null;
-    private String _authToken = null;
-
-    public Logplex(String server, String port, String flowId, String opName, String authToken) {
-      super(flowId, opName);
-      _server = server;
-      _port = port;
-      _authToken = authToken;
-    }
-
-    public void setChannelTokenDrain() throws OperationLoggerException, InterruptedException {
-      JSONObject json;
-      log.info("Fetching flow log info from API for flow "+_flowId);
-      try {
-        json = Universe.instance().api().getFlowSettings(_flowId, _authToken);
-      } catch (APIException e) {
-        throw new OperationLoggerException("Request to API timed-out in LoggerFactory.", e);
-      }
-      log.info(json);
-      JSONObject logplex = json.getJSONObject("logplex");
-      _token = logplex.getString("token");
-      _channel = logplex.getString("channel");
-      _drain = logplex.getString("drain");
-    }
- 
-    @Override public String absoluteFilename() {
-      return Universe.instance().fileFactory().getFlowLoggingRoot(_flowId).getAbsolutePath()+"/flow_"+_flowId+".log";
-    }
-
-    @Override
-    // TODO: Use StringBuilder here.
-    synchronized void writeLogInternal(final String msg, LogPriority priority) throws InterruptedException, OperationLoggerException {
-      if(_channel == null || _token == null || _drain == null) setChannelTokenDrain();
-      String message = "[" + priority + "] " + msg;
-      if (message.length() > MAX_LENGTH) {
-        message = message.substring(0, MAX_LENGTH) + "[...truncated]";
-      }
-      message = message.replace("\n", "\\n").replace("\r", "\\r");
-      String framedMessages = "";
-      String logMessage = "";
-      logMessage += "<134>1 ";
-      logMessage += toRFC3339(new Date())+" ";
-      logMessage += "logplex ";
-      logMessage += _token+" ";
-      logMessage += _procId+" ";
-      logMessage += "- - ";
-      logMessage += message;
-      try {
-        framedMessages += String.valueOf(logMessage.getBytes("UTF-8").length)+" "+logMessage;
-      } catch (UnsupportedEncodingException e) {
-        throw new OperationLoggerException("Can't convert log message string to bytes!", e);
-      }
-      final Client client = Client.create();
-      client.addFilter(new HTTPBasicAuthFilter(_username, _password));
-      final String url = "http://"+_server+":"+_port+"/logs";
-      ClientResponse response;      
-      final WebResource webResource = client.resource(url);
-      int retries = 0;
-      do {
-        retries++;
-        response = webResource.header("Content-Type", "application/logplex-1")
-                              .header("Logplex-Msg-Count", Integer.valueOf(1))
-                              .post(ClientResponse.class, framedMessages);
-        if (response.getStatus() < 300) {
-          break;
-        } else if (response.getStatus() >= 500) {
-          log.info("Server responded with 500. Retrying in a few seconds...(" + retries + ") (" + url + ")");
-          Thread.sleep(WAIT_AFTER_500_MS);
-        } else {
-          throw new OperationLoggerException("Failed : HTTP error code : " + response.getStatus());
-        }
-      } while(retries < MAX_RETRIES);
-      if(retries == MAX_RETRIES) {
-        log.error("Max tries exceeded for posting logs");
-      }
-    }    
-  }
 
   public static class Local extends Base {
 
@@ -269,7 +181,7 @@ public abstract class OperationLogger implements Serializable {
     }
 
     @Override
-    synchronized void writeLogInternal(final String msg, LogPriority priority) throws OperationLoggerException {
+    protected synchronized void writeLogInternal(final String msg, LogPriority priority) throws OperationLoggerException {
       String message = msg;
       if (msg == null) {
         // Do nothing... 
