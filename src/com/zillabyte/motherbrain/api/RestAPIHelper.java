@@ -33,8 +33,13 @@ public class RestAPIHelper {
   }
 
   public static JSONObject get(String path, String authToken) throws APIException {
-    Client client = Client.create();
     String url = "http://" + getHost() + ":" + getPort() + path;
+    return getUrl(authToken, url);
+  }
+
+  public static JSONObject getUrl(String authToken, String url)
+      throws APIException {
+    Client client = Client.create();
     ClientResponse response;
     int retries = 0;
     
