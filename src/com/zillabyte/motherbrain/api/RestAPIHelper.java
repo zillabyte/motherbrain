@@ -33,8 +33,13 @@ public class RestAPIHelper {
   }
 
   public static JSONObject get(String path, String authToken) throws APIException {
-    Client client = Client.create();
     String url = "http://" + getHost() + ":" + getPort() + path;
+    return getUrl(authToken, url);
+  }
+
+  public static JSONObject getUrl(String authToken, String url)
+      throws APIException {
+    Client client = Client.create();
     ClientResponse response;
     int retries = 0;
     
@@ -79,11 +84,15 @@ public class RestAPIHelper {
   
   
   public static JSONObject post(String path, String body, String authToken) throws APIException {
-    Client client = Client.create();
     String url = "http://" + getHost() + ":" + getPort() + path;
 
-    log.info("post: " + url + " body: " + body);
+    return postUrl(url, body, authToken);
+    
+  }
 
+  public static JSONObject postUrl(String url, String body, String authToken) throws APIException {
+    log.info("post: " + url + " body: " + body);
+    Client client = Client.create();
     WebResource webResource = client.resource(url);
     ClientResponse response;
     
@@ -103,7 +112,7 @@ public class RestAPIHelper {
         
         // See if this is a formatted error from the server... 
         String output = response.getEntity(String.class);
-        log.info("Server responded with 500. Retrying in a few seconds...(" + retries + ") (" + path + "): " + Utils.truncate(output));
+        log.info("Server responded with 500. Retrying in a few seconds...(" + retries + ") (" + url + "): " + Utils.truncate(output));
         JSONObject ret; 
         try { 
           
@@ -131,7 +140,6 @@ public class RestAPIHelper {
     if (ret == null) // Should not be NULL, it's just a string conversion.
       throw (APIException) new APIException("Failed: returned response body was null for output: "+output).adviseRetry();
     return ret;
-    
   }
   
   public static JSONObject put(String path, String body, String authToken) throws APIException, InterruptedException {
