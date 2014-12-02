@@ -37,6 +37,10 @@ public class FlowConfig extends UserConfig {
     }
   }
   
+  public String getEmail() {
+    return get("user_email");
+  }
+  
   public static FlowConfig createEmpty() {
     return new FlowConfig();
   }
