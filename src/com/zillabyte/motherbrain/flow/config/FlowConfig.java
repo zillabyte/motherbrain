@@ -28,7 +28,7 @@ public class FlowConfig extends UserConfig {
   public Integer getFlowVersion() {
     return get("flow_version");
   }
-  
+
   public Integer getUserId() {
     if (get("user_id") == null) { 
       return null;
@@ -36,9 +36,13 @@ public class FlowConfig extends UserConfig {
       return Integer.valueOf(get("user_id").toString());
     }
   }
-  
-  public String getEmail() {
-    return get("user_email");
+
+  public String getEmail(){
+    if (this.containsKey("email")) {
+      return get("email").toString();
+    } else {
+      return null;
+    }
   }
   
   public static FlowConfig createEmpty() {
@@ -68,7 +72,8 @@ public class FlowConfig extends UserConfig {
     return createMock()
         .set("flow_id", flowId)
         .set("flow_version", version)
-        .set("user_id", userId);
+        .set("user_id", userId)
+        .set("email", "mock_user@zillabyte.com");  
   }
 
   public static FlowConfig createMock(String flowId) {

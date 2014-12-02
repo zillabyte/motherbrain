@@ -38,6 +38,7 @@ import com.zillabyte.motherbrain.flow.Flow;
 import com.zillabyte.motherbrain.flow.StateMachineException;
 import com.zillabyte.motherbrain.flow.collectors.OutputCollector;
 import com.zillabyte.motherbrain.flow.collectors.coordinated.CoordinatedOutputCollector;
+import com.zillabyte.motherbrain.flow.config.FlowConfig;
 import com.zillabyte.motherbrain.flow.config.OperationConfig;
 import com.zillabyte.motherbrain.flow.config.UserConfig;
 import com.zillabyte.motherbrain.flow.error.strategies.FakeLocalException;
@@ -1162,7 +1163,8 @@ public abstract class Operation implements Serializable {
 
 
             // Prepare the logger... Tell the state store where the logger islocated..
-            _operationLogger = Universe.instance().loggerFactory().logger(topFlowId(), instanceName(), getTopFlow().getFlowConfig().getAuthToken());
+            FlowConfig flowConfig = getTopFlow().getFlowConfig();
+            _operationLogger = Universe.instance().loggerFactory().logger(topFlowId(), instanceName(), flowConfig.getAuthToken(), flowConfig.getEmail());
 
             // Start the heartbeat
             _heartbeat = Heartbeat.create(Operation.this, _executor);
