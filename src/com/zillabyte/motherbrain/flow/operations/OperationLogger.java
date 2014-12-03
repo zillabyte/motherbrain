@@ -52,8 +52,8 @@ public abstract class OperationLogger implements Serializable {
   
   public void logError(Exception e) {
     String message = e.getMessage();
-    message = message.replace("\\n", "\n");
     if(message != null) {
+      message = message.replace("\\n", "\n");
       for(String s : message.split("\n")) { // Apparently we need that many slashes to escape \n
         writeLog(s, LogPriority.ERROR);
       }
