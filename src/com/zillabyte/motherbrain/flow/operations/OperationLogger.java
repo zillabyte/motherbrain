@@ -52,8 +52,9 @@ public abstract class OperationLogger implements Serializable {
   
   public void logError(Exception e) {
     String message = e.getMessage();
+    message = message.replace("\\n", "\n");
     if(message != null) {
-      for(String s : message.split("\\\\n")) { // Apparently we need that many slashes to escape \n
+      for(String s : message.split("\n")) { // Apparently we need that many slashes to escape \n
         writeLog(s, LogPriority.ERROR);
       }
     }
@@ -187,7 +188,7 @@ public abstract class OperationLogger implements Serializable {
         // Do nothing... 
         return;
       }
-      if (message.length() > MAX_LENGTH) {
+      if (message.length() > MAX_LENGTH && !priority.equals(LogPriority.ERROR)) { // don't truncate errors
         message = message.substring(0, MAX_LENGTH) + "[...truncated]";
       }
       message = message.replace("\n", "\\n").replace("\r", "\\r");
