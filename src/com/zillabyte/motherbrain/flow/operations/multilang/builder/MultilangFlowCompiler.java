@@ -493,7 +493,6 @@ public class MultilangFlowCompiler {
       // INIT 
       String nodeType = node.getString("type").toLowerCase();
       Operation operation;
-      _logger.writeLog("Processing node \""+node.getString("name")+"\" ("+nodeType+").", OperationLogger.LogPriority.STARTUP);
   
       // Build the operation
       switch(nodeType) {

@@ -102,7 +102,6 @@ public class APIFlowBuilder implements FlowFetcher {
         
         // Step 1b: write a file, make sure it's writable. 
         _container.createDirectory(ContainerPathHelper.internalPathForFlow(concreteId));
-        _logger.writeLog("in buildFlow", OperationLogger.LogPriority.RUN);
         
         // Step 2: use the CLI to pull into the container...
         _container.buildCommand()
