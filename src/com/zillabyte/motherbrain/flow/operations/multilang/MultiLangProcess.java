@@ -915,6 +915,7 @@ public class MultiLangProcess {
   
 
   public MultiLangProcess addLogListener(final OperationLogger _logger) {
+    _logger.writeLog("logger set in Multilang process", OperationLogger.LogPriority.RUN);
     this.addLogListener(new MultiLangLogHandler() {
 
       @Override
