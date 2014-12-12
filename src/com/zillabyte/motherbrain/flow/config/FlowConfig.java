@@ -75,6 +75,13 @@ public class FlowConfig extends UserConfig {
         .set("user_id", userId)
         .set("email", "mock_user@zillabyte.com");  
   }
+  
+  public static FlowConfig createLocal(String flowId, String authToken) {
+    return createEmpty()
+        .set("auth_token",  authToken)
+        .set("flow_id", flowId)
+        .set("flow_version", 0);
+  }
 
   public static FlowConfig createMock(String flowId) {
     return createMock(flowId, 1, 1);

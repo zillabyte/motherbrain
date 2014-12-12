@@ -31,7 +31,7 @@ public class LocalAPIService implements APIService {
     JSONObject params = new JSONObject();
     params.put("relation", sql);
     params.put("version", version);
-    return RestAPIHelper.post("/relation_backend/concretify_anonymous", params.toString(), authToken);
+    return RestAPIHelper.post("/relation_backend/concretify", params.toString(), authToken);
   }
 
   @Override

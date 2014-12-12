@@ -394,11 +394,12 @@ public class LocalServiceMain {
     }
 
     String flowName = Universe.instance().config().getOrException("flow.name");
+    String authToken = Universe.instance().config().getOrException("auth.token");
     if(Universe.instance().config().getOrException("flow.class").equals("app")) {
-      handleRegisteringApp(FlowConfig.createMock(flowName, 0, 0) );
+      handleRegisteringApp(FlowConfig.createLocal(flowName, authToken) );
     } else {
       Config.setDefault("rpc.source.idle.interval", 1000L * 3);
-      handleStartingRPC(flowName, FlowConfig.createMock(flowName, 0, 0));
+      handleStartingRPC(flowName, FlowConfig.createLocal(flowName, authToken));
     }
     _flowInstance.startNewCycle();
     _flowInstance.waitForState(FlowState.WAITING_FOR_NEXT_CYCLE, FlowState.IDLE);

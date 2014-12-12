@@ -1,7 +1,10 @@
 package com.zillabyte.motherbrain.api;
 
+import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import net.sf.json.JSONArray;
 import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
 
@@ -33,12 +36,19 @@ public class RestAPIHelper {
   }
 
   public static JSONObject get(String path, String authToken) throws APIException {
+    return get(path, authToken, null);
+  }
+  
+  public static JSONObject get(String path, String authToken, JSONObject params) throws APIException {
     String url = "http://" + getHost() + ":" + getPort() + path;
-    return getUrl(authToken, url);
+    return getUrl(authToken, url, params);
   }
 
-  public static JSONObject getUrl(String authToken, String url)
-      throws APIException {
+  public static JSONObject getUrl(String authToken, String url) throws APIException {
+    return getUrl(authToken, url, null);
+  }
+  
+  public static JSONObject getUrl(String authToken, String url, JSONObject params) throws APIException {
     Client client = Client.create();
     ClientResponse response;
     int retries = 0;
@@ -48,6 +58,20 @@ public class RestAPIHelper {
     do {
       retries++;
       WebResource webResource = client.resource(url);
+      if(params != null) {
+        Iterator<?> keys = params.keys();
+        while(keys.hasNext()) {
+          String key = (String) keys.next();
+          Object value = params.get(key);
+          if(value instanceof JSONArray) {
+            for(Object a : ((JSONArray) value).toArray()) {
+              webResource = webResource.queryParam(key, (String) a);
+            }
+          } else {
+            webResource = webResource.queryParam(key, (String) params.get(key));
+          }
+        }
+      }
       
       Builder b = webResource
           .accept("application/json");
