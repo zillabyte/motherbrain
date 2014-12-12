@@ -38,7 +38,7 @@ public class LocalBufferConsumer implements BufferConsumer, Serializable {
       JSONObject job_id = RestAPIHelper.post("/relations/"+_topic+"/samples", "", authToken);
       _source.logger().writeLog("Fetching relation data for "+_topic+". This may take a while...", OperationLogger.LogPriority.RUN);
       while(true) {
-        JSONObject result = RestAPIHelper.post("/relations/"+_topic+"/poll", job_id.toString(), authToken);
+        JSONObject result = RestAPIHelper.get("/relations/"+_topic+"/samples", authToken, job_id);
 
         if(result.getString("status").equalsIgnoreCase("completed")) {
           Iterator<?> aliasesIterator = result.getJSONObject("return").getJSONArray("column_aliases").iterator();

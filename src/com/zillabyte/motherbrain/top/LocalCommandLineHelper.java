@@ -109,7 +109,7 @@ public class LocalCommandLineHelper {
     config.put("api.host",     options.getOptionValue("api.host", "localhost"));
     config.put("api.port",     Integer.parseInt(options.getOptionValue("api.port", "5000")));
     config.put("output.prefix",  options.getOptionValue("output.prefix", ""));
-    config.put("auth.token", options.getOptionValue("auth.token", null));
+    config.put("auth.token", options.getOptionValue("auth.token", "local_no_auth"));
 
     ///////////////////////////////////////////////////////
     // CREATE THE UNIVERSE ////////////////////////////////

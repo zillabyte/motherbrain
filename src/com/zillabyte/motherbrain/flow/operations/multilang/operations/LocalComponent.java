@@ -37,7 +37,7 @@ public final class LocalComponent extends Function {
     super(MultilangHandler.getName(nodeSettings), MultilangHandler.getConfig(nodeSettings));
     _componentName = nodeSettings.getString("id");
     try {
-      _componentMeta = RestAPIHelper.get("/flows/"+_componentName+"/show", (String) Universe.instance().config().getOrException("auth.token"));
+      _componentMeta = RestAPIHelper.get("/flows/"+_componentName, (String) Universe.instance().config().getOrException("auth.token"));
     } catch (APIException e) {
       throw new RuntimeException(e);
     }
@@ -99,7 +99,7 @@ public final class LocalComponent extends Function {
       
       // Continue to ping the rpc until it is done
       while(true) {
-        JSONObject rpcStatus = RestAPIHelper.post("/components/"+_componentName+"/results", execBody.toString(), authToken);
+        JSONObject rpcStatus = RestAPIHelper.get("/components/"+_componentName+"/execute", authToken, execBody);
         if(rpcStatus.containsKey("results")) {
           JSONObject rpcResults = (JSONObject) rpcStatus.getJSONObject("results").values().iterator().next();
           if(rpcResults.containsKey("data")) {
