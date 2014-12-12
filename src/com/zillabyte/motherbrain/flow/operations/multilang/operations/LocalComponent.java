@@ -20,6 +20,7 @@ import com.zillabyte.motherbrain.flow.graph.Connection;
 import com.zillabyte.motherbrain.flow.operations.Function;
 import com.zillabyte.motherbrain.flow.operations.OperationException;
 import com.zillabyte.motherbrain.flow.operations.multilang.MultiLangException;
+import com.zillabyte.motherbrain.universe.Universe;
 import com.zillabyte.motherbrain.utils.Utils;
 
 
@@ -36,7 +37,7 @@ public final class LocalComponent extends Function {
     super(MultilangHandler.getName(nodeSettings), MultilangHandler.getConfig(nodeSettings));
     _componentName = nodeSettings.getString("id");
     try {
-      _componentMeta = RestAPIHelper.get("/flows/"+_componentName+"/show_anonymous", "");
+      _componentMeta = RestAPIHelper.get("/flows/"+_componentName+"/show", (String) Universe.instance().config().getOrException("auth.token"));
     } catch (APIException e) {
       throw new RuntimeException(e);
     }
@@ -77,6 +78,7 @@ public final class LocalComponent extends Function {
 
   @Override
   public void process(final MapTuple t, final OutputCollector collector) throws OperationException, InterruptedException {
+    String authToken = this.getTopFlow().getFlowConfig().getAuthToken();
     try {
       // Translate the map tuple into a list of just the values (order is important, so we need to loop through the fields one by one).
       // This will be passed to a running rpc as an argument
@@ -90,14 +92,14 @@ public final class LocalComponent extends Function {
       // Send the rpc request
       JSONObject body = new JSONObject();
       body.put("rpc_inputs", tupleList);
-      JSONObject reply = RestAPIHelper.post("/components/"+_componentName+"/execute_anonymous", body.toString(), "");
+      JSONObject reply = RestAPIHelper.post("/components/"+_componentName+"/execute", body.toString(), authToken);
       Collection<?> execId = reply.getJSONObject("execute_ids").values();
       JSONObject execBody = new JSONObject();
       execBody.put("execute_ids", execId);
       
       // Continue to ping the rpc until it is done
       while(true) {
-        JSONObject rpcStatus = RestAPIHelper.post("/components/"+_componentName+"/results_anonymous", execBody.toString(), "");
+        JSONObject rpcStatus = RestAPIHelper.post("/components/"+_componentName+"/results", execBody.toString(), authToken);
         if(rpcStatus.containsKey("results")) {
           JSONObject rpcResults = (JSONObject) rpcStatus.getJSONObject("results").values().iterator().next();
           if(rpcResults.containsKey("data")) {

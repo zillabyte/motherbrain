@@ -76,6 +76,13 @@ public class LocalCommandLineHelper {
         .withType(String.class)
         .create()
         );
+    
+    availOptions.addOption(OptionBuilder
+        .hasArg()
+        .withLongOpt("auth.token")
+        .withType(String.class)
+        .create()
+        );
 
     ///////////////////////////////////////////////////////
     // BUILD CORE CONFIG //////////////////////////////////
@@ -102,6 +109,7 @@ public class LocalCommandLineHelper {
     config.put("api.host",     options.getOptionValue("api.host", "localhost"));
     config.put("api.port",     Integer.parseInt(options.getOptionValue("api.port", "5000")));
     config.put("output.prefix",  options.getOptionValue("output.prefix", ""));
+    config.put("auth.token", options.getOptionValue("auth.token", null));
 
     ///////////////////////////////////////////////////////
     // CREATE THE UNIVERSE ////////////////////////////////
